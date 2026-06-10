@@ -1,0 +1,16 @@
+{
+  "name": "ip168-js-worker",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "node --check ip168-online.clean.js",
+    "test": "node --test tests/*.test.mjs",
+    "cf:check": "wrangler check --config wrangler.jsonc",
+    "cf:dry-run": "wrangler deploy --dry-run --config wrangler.jsonc",
+    "cf:deploy": "wrangler deploy --config wrangler.jsonc",
+    "cf:page": "wrangler kv key put ym:index.html --path ip168-remote-admin-1c71e482.html --binding KV --remote --config wrangler.jsonc"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  }
+}

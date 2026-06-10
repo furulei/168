@@ -1,0 +1,14 @@
+ADMIN=change-this-admin-password
+
+# Optional runtime settings
+# ADMIN_N=/a
+# COOKIE_SECRET=change-this-cookie-secret
+# HOST=example.com
+# UUID=00000000-0000-0000-0000-000000000000
+# SUB_TOKEN=change-this-subscription-token
+# PROXYIP=example.com:443
+# SUB_CONVERTER_URL=https://converter.example.com
+# PROXYIP_CATALOG_SUMMARY_URL=https://example.com/proxyip/summary.json
+# PROXYIP_CATALOG_IPV4_URL=https://example.com/proxyip/ipv4.json
+# PROXYIP_CATALOG_IPV6_URL=https://example.com/proxyip/ipv6.json
+# PROXYIP_CATALOG_QUERY_URL=https://example.com/proxyip/query

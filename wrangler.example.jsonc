@@ -1,0 +1,13 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "your-worker-name",
+  "main": "ip168-online.clean.js",
+  "compatibility_date": "2026-06-10",
+  "keep_vars": true,
+  "kv_namespaces": [
+    {
+      "binding": "KV",
+      "id": "your-kv-namespace-id"
+    }
+  ]
+}
