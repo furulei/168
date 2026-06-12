@@ -1590,8 +1590,9 @@
     }
 
     const PROXY_KEY = "\u53cd\u4ee3";
-    const SUB_KEY = "\u4f18\u9009\u8ba2\u9605\u751f\u6210";
-    const DEFAULT_SUB_NAME = "\u5f52\u6765\u662f\u5c11\u5e74";
+    const SUB_KEY = "\u8ba2\u9605\u751f\u6210";
+    const SUB_KEY_LEGACY = "\u4f18\u9009\u8ba2\u9605\u751f\u6210";
+    const DEFAULT_SUB_NAME = "\u5f52\u6765\u4ecd\u5c11\u5e74";
     const bootstrap = injected;
     const adminBase = bootstrap.adminBase || "/a";
     bootstrap.adminBase = adminBase;
@@ -1963,7 +1964,7 @@
 
     function fillForm(config, addText) {
       const proxy = config[PROXY_KEY] || {};
-      const sub = config[SUB_KEY] || {};
+      const sub = config[SUB_KEY] || config[SUB_KEY_LEGACY] || {};
       fields.host.value = config.HOST || "";
       fields.uuid.value = config.UUID || "";
       fields.token.value = sub.TOKEN || "";
@@ -1980,7 +1981,7 @@
     function readConfigFromForm() {
       const config = clone(state.config);
       const proxy = { ...(config[PROXY_KEY] || {}) };
-      const sub = { ...(config[SUB_KEY] || {}) };
+      const sub = { ...(config[SUB_KEY] || config[SUB_KEY_LEGACY] || {}) };
       const isAutoMode = fields.proxyMode.value === "auto";
       config.HOST = fields.host.value.trim();
       config.HOSTS = config.HOST ? [config.HOST] : [];
@@ -2000,6 +2001,7 @@
       sub.SUBNAME = fields.subName.value.trim() || DEFAULT_SUB_NAME;
       config[PROXY_KEY] = proxy;
       config[SUB_KEY] = sub;
+      config[SUB_KEY_LEGACY] = sub;
       return config;
     }
 
