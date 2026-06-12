@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex,nofollow">
   <title>IP168 控制台</title>
-  <!--IP168_BOOTSTRAP-->
+  <script id="ip168-bootstrap-anchor"></script>
   <style>
     :root {
       color-scheme: dark;
@@ -1927,9 +1927,16 @@
         throw new Error(response.redirected ? "登录状态失效，请重新进入后台" : "响应不是 JSON");
       }
       if (!response.ok) {
-        throw new Error(data.error || data.message || ("HTTP " + response.status));
+        const error = new Error(data.error || data.message || ("HTTP " + response.status));
+        error.status = response.status;
+        throw error;
       }
       return data;
+    }
+
+    function isAuthError(error) {
+      const status = Number(error?.status || 0);
+      return status === 401 || status === 403 || /forbidden|unauthorized|登录状态失效/i.test(String(error?.message || ""));
     }
 
     async function api(url, options) {
@@ -2225,8 +2232,8 @@
     }
 
     function proxyLatencyLabel(node, probe) {
-      if (probe && !probe.ok) return probe.error || "失败";
-      if (probe && probe.ok) return (probe.traceMs ?? probe.connectMs ?? "-") + "ms";
+      if (probe && !probe.ok) return probeFailureText(probe);
+      if (probe && probe.ok) return (probe.traceMs ?? probe.googleMs ?? probe.connectMs ?? "-") + "ms";
       return node.latencyMs == null ? "-" : node.latencyMs + "ms";
     }
 
@@ -2235,6 +2242,11 @@
       const region = String(node.region || "").trim();
       const city = String(node.city || "").trim();
       return city || region || country || "-";
+    }
+
+    function probeFailureText(result) {
+      const text = String(result?.error || result?.traceError || result?.googleError || "失败").trim();
+      return text.length > 42 ? text.slice(0, 42) + "..." : text;
     }
 
     function selectedVisibleProxyCount(nodes) {
@@ -2304,12 +2316,12 @@
       const portSelect = document.getElementById("portSelect");
       const countries = catalogCountryList(data, version);
       const ports = catalogPortList(data, version);
-      countrySelect.innerHTML = '<option value="">??????</option>' + countries.map((item) => `<option value="${escapeHtml(item.code)}">${escapeHtml(item.code + " (" + item.count + ")")}</option>`).join("");
+      countrySelect.innerHTML = '<option value="">全部国家</option>' + countries.map((item) => `<option value="${escapeHtml(item.code)}">${escapeHtml(item.code + " (" + item.count + ")")}</option>`).join("");
       const topPorts = topCatalogPorts(ports);
       portSelect.innerHTML = topPorts.map((item) => `<option value="${escapeHtml(item.port)}">${escapeHtml(item.port)}</option>`).join("");
       portSelect.value = topPorts.some((item) => item.port === "443") ? "443" : topPorts[0]?.port || "443";
       renderProxyCountryButtons(countries);
-      document.getElementById("candidateStatus").textContent = "????0/0";
+      document.getElementById("candidateStatus").textContent = "已选 0/0";
     }
 
     async function loadSummary() {
@@ -2617,8 +2629,8 @@
     function autoRunDelayText(result) {
       if (!result) return state.autoRun.testing ? "\u6392\u961f\u4e2d" : "\u672a\u6d4b\u901f";
       if (result.testing) return "\u6d4b\u901f\u4e2d";
-      if (!result.ok) return result.error ? "\u4e0d\u53ef\u7528" : "\u5931\u8d25";
-      const value = result.traceMs ?? result.connectMs ?? result.delayMs ?? result.latencyMs ?? result.latency;
+      if (!result.ok) return probeFailureText(result);
+      const value = result.traceMs ?? result.googleMs ?? result.connectMs ?? result.delayMs ?? result.latencyMs ?? result.latency;
       return Number.isFinite(Number(value)) ? Math.round(Number(value)) + "ms" : "\u53ef\u7528";
     }
 
@@ -2708,6 +2720,13 @@
             concurrency: AUTO_RUN_TEST_CONCURRENCY
           });
         } catch (error) {
+          if (isAuthError(error)) {
+            state.autoRun.testing = false;
+            state.autoRun.cancel = true;
+            renderAutoRunDialog();
+            fields.autoRunProgress.textContent = "登录状态失效，请重新进入后台";
+            throw new Error("登录状态失效，请重新进入后台");
+          }
           chunk.forEach((proxy) => state.autoRun.results.set(proxy, {
             proxy,
             ok: false,

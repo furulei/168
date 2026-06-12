@@ -1,8 +1,7 @@
 ADMIN=change-this-admin-password
 
 # Optional runtime settings
-# ADMIN_N=/a
-# COOKIE_SECRET=change-this-cookie-secret
+# admin_n=/a
 # HOST=example.com
 # UUID=00000000-0000-0000-0000-000000000000
 # SUB_TOKEN=change-this-subscription-token

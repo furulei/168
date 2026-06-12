@@ -1,7 +1,5 @@
 ﻿var __defProp = Object.defineProperty;
 var __name = (target, value) => __defProp(target, "name", { value, configurable: true });
-
-// worker-ip168-proxy-mode.js
 import { connect } from "cloudflare:sockets";
 function tlsToUint8Array(data) {
   if (data instanceof Uint8Array) return data;
@@ -44,7 +42,7 @@ var shouldIgnoreTlsAlert = (fragment) => fragment?.[0] === ALERT_LEVEL_WARNING &
 var textEncoder = new TextEncoder();
 var textDecoder = new TextDecoder();
 var EMPTY_BYTES = new Uint8Array(0);
-var CIPHER_SUITES_BY_ID = /* @__PURE__ */ new Map([
+var CIPHER_SUITES_BY_ID = new Map([
   [4865, { id: 4865, keyLen: 16, ivLen: 12, hash: "SHA-256", tls13: true }],
   [4866, { id: 4866, keyLen: 32, ivLen: 12, hash: "SHA-384", tls13: true }],
   [4867, { id: 4867, keyLen: 32, ivLen: 12, hash: "SHA-256", tls13: true, chacha: true }],
@@ -55,7 +53,7 @@ var CIPHER_SUITES_BY_ID = /* @__PURE__ */ new Map([
   [49196, { id: 49196, keyLen: 32, ivLen: 4, hash: "SHA-384", kex: "ECDHE" }],
   [52393, { id: 52393, keyLen: 32, ivLen: 12, hash: "SHA-256", kex: "ECDHE", chacha: true }]
 ]);
-var GROUPS_BY_ID = /* @__PURE__ */ new Map([[29, "X25519"], [23, "P-256"]]);
+var GROUPS_BY_ID = new Map([[29, "X25519"], [23, "P-256"]]);
 var SUPPORTED_SIGNATURE_ALGORITHMS = [2052, 2053, 2054, 1025, 1281, 1537, 1027, 1283, 1539];
 var tlsBytes = (...parts) => {
   const flattenBytes = (values) => values.flatMap((value) => value instanceof Uint8Array ? [...value] : Array.isArray(value) ? flattenBytes(value) : "number" == typeof value ? [value] : []);
@@ -114,21 +112,14 @@ async function hkdfExpandLabel(hash, secret, label, context, length) {
 __name(hkdfExpandLabel, "hkdfExpandLabel");
 async function generateKeyShare(group = "P-256") {
   const algorithm = "X25519" === group ? { name: "X25519" } : { name: "ECDH", namedCurve: group };
-  const keyPair = (
-    /** @type {CryptoKeyPair} */
-    await crypto.subtle.generateKey(algorithm, true, ["deriveBits"])
-  );
-  const publicKeyRaw = (
-    /** @type {ArrayBuffer} */
-    await crypto.subtle.exportKey("raw", keyPair.publicKey)
-  );
+  const keyPair = await crypto.subtle.generateKey(algorithm, true, ["deriveBits"]);
+  const publicKeyRaw = await crypto.subtle.exportKey("raw", keyPair.publicKey);
   return { keyPair, publicKeyRaw: new Uint8Array(publicKeyRaw) };
 }
 __name(generateKeyShare, "generateKeyShare");
 async function deriveSharedSecret(privateKey, peerPublicKey, group = "P-256") {
   const algorithm = "X25519" === group ? { name: "X25519" } : { name: "ECDH", namedCurve: group }, peerKey = await crypto.subtle.importKey("raw", peerPublicKey, algorithm, false, []), bits = "P-384" === group ? 384 : "P-521" === group ? 528 : 256;
   return new Uint8Array(await crypto.subtle.deriveBits(
-    /** @type {any} */
     { name: algorithm.name, public: peerKey },
     privateKey,
     bits
@@ -410,7 +401,7 @@ var UserlandTlsClient = class {
   }
   constructor(socket, options = {}) {
     if (this.socket = socket, this.serverName = options.serverName || "", this.supportTls13 = false !== options.tls13, this.supportTls12 = false !== options.tls12, !this.supportTls13 && !this.supportTls12) throw new Error("At least one TLS version must be enabled");
-    this.alpnProtocols = Array.isArray(options.alpn) ? options.alpn : options.alpn ? [options.alpn] : null, this.allowChacha = options.allowChacha !== false, this.timeout = options.timeout ?? 3e4, this.clientRandom = randomBytes(32), this.serverRandom = null, this.handshakeChunks = [], this.handshakeComplete = false, this.negotiatedAlpn = null, this.cipherSuite = null, this.cipherConfig = null, this.isTls13 = false, this.masterSecret = null, this.handshakeSecret = null, this.clientWriteKey = null, this.serverWriteKey = null, this.clientWriteIv = null, this.serverWriteIv = null, this.clientHandshakeKey = null, this.serverHandshakeKey = null, this.clientHandshakeIv = null, this.serverHandshakeIv = null, this.clientAppKey = null, this.serverAppKey = null, this.clientAppIv = null, this.serverAppIv = null, this.clientWriteCryptoKey = null, this.serverWriteCryptoKey = null, this.clientHandshakeCryptoKey = null, this.serverHandshakeCryptoKey = null, this.clientAppCryptoKey = null, this.serverAppCryptoKey = null, this.clientSeqNum = 0n, this.serverSeqNum = 0n, this.recordParser = new TlsRecordParser(), this.handshakeParser = new TlsHandshakeParser(), this.keyPairs = /* @__PURE__ */ new Map(), this.ecdhKeyPair = null, this.sawCert = false;
+    this.alpnProtocols = Array.isArray(options.alpn) ? options.alpn : options.alpn ? [options.alpn] : null, this.allowChacha = options.allowChacha !== false, this.timeout = options.timeout ?? 3e4, this.clientRandom = randomBytes(32), this.serverRandom = null, this.handshakeChunks = [], this.handshakeComplete = false, this.negotiatedAlpn = null, this.cipherSuite = null, this.cipherConfig = null, this.isTls13 = false, this.masterSecret = null, this.handshakeSecret = null, this.clientWriteKey = null, this.serverWriteKey = null, this.clientWriteIv = null, this.serverWriteIv = null, this.clientHandshakeKey = null, this.serverHandshakeKey = null, this.clientHandshakeIv = null, this.serverHandshakeIv = null, this.clientAppKey = null, this.serverAppKey = null, this.clientAppIv = null, this.serverAppIv = null, this.clientWriteCryptoKey = null, this.serverWriteCryptoKey = null, this.clientHandshakeCryptoKey = null, this.serverHandshakeCryptoKey = null, this.clientAppCryptoKey = null, this.serverAppCryptoKey = null, this.clientSeqNum = 0n, this.serverSeqNum = 0n, this.recordParser = new TlsRecordParser(), this.handshakeParser = new TlsHandshakeParser(), this.keyPairs = new Map(), this.ecdhKeyPair = null, this.sawCert = false;
   }
   recordHandshake(chunk) {
     this.handshakeChunks.push(chunk);
@@ -455,7 +446,7 @@ var UserlandTlsClient = class {
   }
   async handshake() {
     const [p256Share, x25519Share] = await Promise.all([generateKeyShare("P-256"), generateKeyShare("X25519")]);
-    this.keyPairs = /* @__PURE__ */ new Map([[23, p256Share], [29, x25519Share]]), this.ecdhKeyPair = p256Share.keyPair;
+    this.keyPairs = new Map([[23, p256Share], [29, x25519Share]]), this.ecdhKeyPair = p256Share.keyPair;
     const reader = this.socket.readable.getReader(), writer = this.socket.writable.getWriter();
     try {
       const clientHello = buildClientHello(this.clientRandom, this.serverName, { x25519: x25519Share.publicKeyRaw, p256: p256Share.publicKeyRaw }, { tls13: this.supportTls13, tls12: this.supportTls12, alpn: this.alpnProtocols, chacha: this.allowChacha });
@@ -468,7 +459,7 @@ var UserlandTlsClient = class {
       }
       serverHello.isTls13 ? await this.handshakeTls13(reader, writer, serverHello) : await this.handshakeTls12(reader, writer), this.handshakeComplete = true;
     } finally {
-      reader.releaseLock(), writer.releaseLock();
+      safeReleaseLock(reader, "TLS reader"), safeReleaseLock(writer, "TLS writer");
     }
   }
   async receiveServerHello(reader) {
@@ -517,7 +508,6 @@ var UserlandTlsClient = class {
       }
     }), "Connection closed during TLS 1.2 handshake"), !this.sawCert) throw new Error("Missing TLS 1.2 leaf certificate");
     const serverKeyExchangeData = (
-      /** @type {{ namedCurve: number, serverPublicKey: Uint8Array } | null} */
       serverKeyExchange
     );
     if (!serverKeyExchangeData) throw new Error("Missing TLS 1.2 ServerKeyExchange");
@@ -674,7 +664,7 @@ var UserlandTlsClient = class {
       }
       await writer.write(records.length === 1 ? records[0] : concatBytes(...records));
     } finally {
-      writer.releaseLock();
+      safeReleaseLock(writer, "TLS writer");
     }
   }
   async read() {
@@ -704,7 +694,7 @@ var UserlandTlsClient = class {
         if (done) return null;
         this.recordParser.feed(value);
       } finally {
-        reader.releaseLock();
+        safeReleaseLock(reader, "TLS reader");
       }
     }
   }
@@ -730,14 +720,14 @@ var SUBSCRIPTION_GUARD = Object.freeze({
   RATE_LIMIT_PER_MINUTE: 30,
   RATE_LIMIT_WINDOW_SECONDS: 60
 });
-var subscriptionRateMemory = /* @__PURE__ */ new Map();
+var subscriptionRateMemory = new Map();
 var KV_CACHE_TTL_MS = 5 * 60 * 1e3;
 var KV_AUTO_CACHE_TTL_MS = 60 * 1e3;
 var KV_AUTO_STATE_CACHE_TTL_MS = 30 * 1e3;
 var KV_HEALTH_CACHE_TTL_MS = 2 * 60 * 1e3;
 var PROXY_HEALTH_WRITE_DEBOUNCE_MS = 5 * 60 * 1e3;
-var kvReadCache = globalThis.__WORKER_KV_READ_CACHE || (globalThis.__WORKER_KV_READ_CACHE = /* @__PURE__ */ new Map());
-var proxyHealthWriteCache = globalThis.__WORKER_PROXY_HEALTH_WRITE_CACHE || (globalThis.__WORKER_PROXY_HEALTH_WRITE_CACHE = /* @__PURE__ */ new Map());
+var kvReadCache = globalThis.__WORKER_KV_READ_CACHE || (globalThis.__WORKER_KV_READ_CACHE = new Map());
+var proxyHealthWriteCache = globalThis.__WORKER_PROXY_HEALTH_WRITE_CACHE || (globalThis.__WORKER_PROXY_HEALTH_WRITE_CACHE = new Map());
 var JSON_HEADERS = Object.freeze({
   "Content-Type": "application/json; charset=utf-8",
   "Cache-Control": "no-store"
@@ -755,9 +745,9 @@ var ADMIN_CORS_HEADERS = Object.freeze({
 var ROUTES = Object.freeze({
   PUBLIC_ROOT: "/",
   ADMIN_ROOT: "/a",
+  ADMIN_ALIAS: "/admin",
   SUBSCRIPTION: "/sub"
 });
-var PUBLIC_UNDER_CONSTRUCTION_MESSAGE = "This website is under construction.";
 var PROXYIP_CATALOG_SUMMARY_URL = "";
 var PROXYIP_CATALOG_IPV4_URL = "";
 var PROXYIP_CATALOG_IPV6_URL = "";
@@ -769,7 +759,7 @@ var DEFAULT_SUB_CONVERTER_URL = "";
 var DEFAULT_SUB_NAME = "\u5F52\u6765\u662F\u5C11\u5E74";
 var ADMIN_PAGE_CACHE_TTL_SECONDS = 86400;
 var ADMIN_PAGE_KV_KEY = "ym:index.html";
-var ADMIN_PAGE_KV_CACHE_VERSION = "2026-06-10-short-routes";
+var ADMIN_PAGE_KV_CACHE_VERSION = "2026-06-10-probe-auth-errors";
 var ADMIN_PAGE_KV_CACHE_TTL_MS = 24 * 60 * 60 * 1e3;
 var DEFAULT_PROXY_AUTO_SETTINGS = Object.freeze({
   enabled: false,
@@ -803,24 +793,23 @@ function normalizePathAlias(raw) {
 }
 __name(normalizePathAlias, "normalizePathAlias");
 function getAdminBasePath(env) {
-  const raw = env?.ADMIN_N || env?.admin_n || env?.ADMIN_PATH_ALIAS || env?.admin_path_alias || env?.ENTRY_PATH_LIMIT || env?.entry_path_limit || "";
+  const raw = env?.admin_n || "";
   return normalizePathAlias(raw) || ROUTES.ADMIN_ROOT;
 }
 __name(getAdminBasePath, "getAdminBasePath");
 function getAdminEntryBasePath(pathname, basePath) {
   const path = String(pathname || "");
-  const base = normalizePathAlias(basePath);
-  if (!base) {
-    return "";
-  }
-  const baseWithSlash = `${base}/`;
-  if (path === base || path.startsWith(baseWithSlash)) {
-    return base;
+  const bases = [normalizePathAlias(basePath), ROUTES.ADMIN_ALIAS].filter(Boolean);
+  for (const base of bases) {
+    const baseWithSlash = `${base}/`;
+    if (path === base || path.startsWith(baseWithSlash)) {
+      return base;
+    }
   }
   return "";
 }
 __name(getAdminEntryBasePath, "getAdminEntryBasePath");
-function readOptionalEnvString(env, names) {
+function envText(env, ...names) {
   for (const name of names) {
     const value = String(env?.[name] || "").trim();
     if (value) {
@@ -829,7 +818,7 @@ function readOptionalEnvString(env, names) {
   }
   return "";
 }
-__name(readOptionalEnvString, "readOptionalEnvString");
+__name(envText, "envText");
 function normalizeOptionalUrl(value) {
   const raw = String(value || "").trim();
   if (!raw) {
@@ -849,16 +838,16 @@ __name(normalizeOptionalUrl, "normalizeOptionalUrl");
 function getProxyIpCatalogUrl(env, kind) {
   const normalized = String(kind || "summary").trim().toLowerCase().replace(/\.json$/, "");
   if (normalized === "summary") {
-    return normalizeOptionalUrl(readOptionalEnvString(env, ["PROXYIP_CATALOG_SUMMARY_URL", "proxyip_catalog_summary_url"])) || PROXYIP_CATALOG_SUMMARY_URL;
+    return normalizeOptionalUrl(envText(env, "PROXYIP_CATALOG_SUMMARY_URL")) || PROXYIP_CATALOG_SUMMARY_URL;
   }
   if (normalized === "ipv4" || normalized === "v4" || normalized === "4") {
-    return normalizeOptionalUrl(readOptionalEnvString(env, ["PROXYIP_CATALOG_IPV4_URL", "proxyip_catalog_ipv4_url"])) || PROXYIP_CATALOG_IPV4_URL;
+    return normalizeOptionalUrl(envText(env, "PROXYIP_CATALOG_IPV4_URL")) || PROXYIP_CATALOG_IPV4_URL;
   }
   if (normalized === "ipv6" || normalized === "v6" || normalized === "6") {
-    return normalizeOptionalUrl(readOptionalEnvString(env, ["PROXYIP_CATALOG_IPV6_URL", "proxyip_catalog_ipv6_url"])) || PROXYIP_CATALOG_IPV6_URL;
+    return normalizeOptionalUrl(envText(env, "PROXYIP_CATALOG_IPV6_URL")) || PROXYIP_CATALOG_IPV6_URL;
   }
   if (normalized === "query") {
-    return normalizeOptionalUrl(readOptionalEnvString(env, ["PROXYIP_CATALOG_QUERY_URL", "proxyip_catalog_query_url"])) || PROXYIP_CATALOG_QUERY_URL;
+    return normalizeOptionalUrl(envText(env, "PROXYIP_CATALOG_QUERY_URL")) || PROXYIP_CATALOG_QUERY_URL;
   }
   return "";
 }
@@ -949,7 +938,7 @@ function endpointKey(endpoint) {
 __name(endpointKey, "endpointKey");
 function parseEntryEndpoints(text) {
   const endpoints = [];
-  const seen = /* @__PURE__ */ new Set();
+  const seen = new Set();
   for (const rawLine of String(text || "").split(/\r?\n/)) {
     const line = rawLine.trim();
     if (!line || line.startsWith("#")) {
@@ -974,7 +963,7 @@ function parseEntryEndpoints(text) {
 __name(parseEntryEndpoints, "parseEntryEndpoints");
 function parseProxyEndpoints(text) {
   const endpoints = [];
-  const seen = /* @__PURE__ */ new Set();
+  const seen = new Set();
   for (const rawValue of String(text || "").split(/[\r\n\t,;]+/)) {
     const value = rawValue.trim();
     if (!value || value.toLowerCase() === "auto") {
@@ -1118,28 +1107,18 @@ function normalizeProxyMode(value) {
 }
 __name(normalizeProxyMode, "normalizeProxyMode");
 function newUuid(env) {
-  const envUuid = String(env?.UUID || env?.uuid || "").trim();
+  const envUuid = String(env?.UUID || "").trim();
   return isUuid(envUuid) ? envUuid.toLowerCase() : crypto.randomUUID();
 }
 __name(newUuid, "newUuid");
-function envText(env, ...names) {
-  for (const name of names) {
-    const value = String(env?.[name] || "").trim();
-    if (value) {
-      return value;
-    }
-  }
-  return "";
-}
-__name(envText, "envText");
 function hasEnvConfigFallback(env) {
-  return Boolean(isUuid(String(env?.UUID || env?.uuid || "").trim()) && envText(env, "SUB_TOKEN", "sub_token", "TOKEN", "token"));
+  return Boolean(isUuid(String(env?.UUID || "").trim()) && envText(env, "SUB_TOKEN"));
 }
 __name(hasEnvConfigFallback, "hasEnvConfigFallback");
 function createDefaultConfig(requestHostname, env = {}) {
   const host = normalizeWorkerHost(env.HOST, requestHostname);
-  const envProxyip = envText(env, "PROXYIP", "proxyip");
-  const envToken = envText(env, "SUB_TOKEN", "sub_token", "TOKEN", "token");
+  const envProxyip = envText(env, "PROXYIP");
+  const envToken = envText(env, "SUB_TOKEN");
   return {
     UUID: newUuid(env),
     HOST: host,
@@ -1325,7 +1304,7 @@ async function saveConfig(env, config, requestHostname) {
 __name(saveConfig, "saveConfig");
 async function loadEntryEndpointsText(env) {
   return await readCachedKvText(env, ENTRY_ENDPOINTS_KV_KEY, KV_CACHE_TTL_MS, {
-    fallback: envText(env, "ENTRY_ENDPOINTS", "entry_endpoints", "ADD_TEXT", "add_text")
+    fallback: ""
   }) || "";
 }
 __name(loadEntryEndpointsText, "loadEntryEndpointsText");
@@ -1421,7 +1400,7 @@ async function loadProxyHealth(env, config, nowMs = Date.now(), options = {}) {
   });
   if (!stored) {
     const empty = normalizeProxyHealth(null, config, nowMs);
-    return { ...empty, disabledKeys: /* @__PURE__ */ new Set() };
+    return { ...empty, disabledKeys: new Set() };
   }
   try {
     const health = normalizeProxyHealth(JSON.parse(stored), config, nowMs);
@@ -1429,7 +1408,7 @@ async function loadProxyHealth(env, config, nowMs = Date.now(), options = {}) {
   } catch (error) {
     console.warn("[KV] ignored invalid fd.jk.json", error);
     const empty = normalizeProxyHealth(null, config, nowMs);
-    return { ...empty, disabledKeys: /* @__PURE__ */ new Set() };
+    return { ...empty, disabledKeys: new Set() };
   }
 }
 __name(loadProxyHealth, "loadProxyHealth");
@@ -1510,7 +1489,7 @@ function normalizeProxyAutoPort(rawValue) {
 }
 __name(normalizeProxyAutoPort, "normalizeProxyAutoPort");
 function normalizeProxyAutoStatus(rawValue) {
-  const allowed = /* @__PURE__ */ new Set(["verified", "usable", "verified,usable", "all"]);
+  const allowed = new Set(["verified", "usable", "verified,usable", "all"]);
   const value = String(rawValue || DEFAULT_PROXY_AUTO_SETTINGS.status).split(",").map((item) => item.trim().toLowerCase()).filter(Boolean).join(",");
   return allowed.has(value) ? value : DEFAULT_PROXY_AUTO_SETTINGS.status;
 }
@@ -1523,9 +1502,9 @@ function normalizeProxyAutoSettings(rawSettings) {
   const input = rawSettings && typeof rawSettings === "object" && !Array.isArray(rawSettings) ? rawSettings : {};
   const normalizedPort = normalizeProxyAutoPort(input.port);
   const portMode = input.portMode === "explicit" ? "explicit" : "all";
-  const hasCountry = Boolean(String(input.country || "").trim());
+  const hasExplicitEnabled = Object.prototype.hasOwnProperty.call(input, "enabled");
   return {
-    enabled: hasCountry ? true : Boolean(input.enabled),
+    enabled: hasExplicitEnabled ? Boolean(input.enabled) : DEFAULT_PROXY_AUTO_SETTINGS.enabled,
     ipVersion: normalizeProxyAutoIpVersion(input.ipVersion),
     country: normalizeProxyAutoCountry(input.country),
     port: portMode === "explicit" ? normalizedPort : "",
@@ -1625,7 +1604,7 @@ async function saveProxyAutoState(env, state) {
 }
 __name(saveProxyAutoState, "saveProxyAutoState");
 function proxyAutoHostname(env, fallbackHostname = "") {
-  const value = String(env?.HOST || env?.host || fallbackHostname || "localhost").trim();
+  const value = String(env?.HOST || fallbackHostname || "localhost").trim();
   try {
     return normalizeWorkerHost(value, "localhost");
   } catch (error) {
@@ -1680,7 +1659,7 @@ function sortProxyAutoResults(left, right) {
   return leftScore - rightScore;
 }
 __name(sortProxyAutoResults, "sortProxyAutoResults");
-function selectProxyAutoResults(results, settings, limit, excluded = /* @__PURE__ */ new Set()) {
+function selectProxyAutoResults(results, settings, limit, excluded = new Set()) {
   const excludedSet = excluded instanceof Set ? excluded : new Set(excluded || []);
   return (Array.isArray(results) ? results : []).filter((result) => isProxyAutoResultUsable(result, settings)).filter((result) => !excludedSet.has(String(result.proxy || "").toLowerCase())).sort(sortProxyAutoResults).slice(0, limit).map((result) => result.proxy);
 }
@@ -1708,7 +1687,7 @@ function standbyStatePatch(groups, candidateResults = []) {
     standbyGroups,
     standbyProxyip: flattenStandbyGroups(standbyGroups),
     nextStandbyGroupIndex: 0,
-    standbyUpdatedAt: (/* @__PURE__ */ new Date()).toISOString(),
+    standbyUpdatedAt: (new Date()).toISOString(),
     candidateResults
   };
 }
@@ -1886,6 +1865,7 @@ function proxyAutoStateProxyip(state) {
   return "";
 }
 __name(proxyAutoStateProxyip, "proxyAutoStateProxyip");
+var currentProxyipForAdmin = (settings, state, config) => settings?.enabled !== false ? proxyAutoStateProxyip(state) : String(getProxyConfig(config).PROXYIP || "").trim();
 function parseProxyAutoStateEndpoints(state) {
   const source = proxyAutoStateProxyip(state);
   if (!source) {
@@ -1928,7 +1908,7 @@ async function loadRuntimeProxyInfo(env, config) {
 }
 __name(loadRuntimeProxyInfo, "loadRuntimeProxyInfo");
 function buildProxyAutoState(base, patch) {
-  const finishedAt = (/* @__PURE__ */ new Date()).toISOString();
+  const finishedAt = (new Date()).toISOString();
   return normalizeProxyAutoState({
     ...base,
     ...patch,
@@ -1941,7 +1921,7 @@ async function runProxyAutoMaintenance(env, options = {}) {
   const hostname = proxyAutoHostname(env, options.hostname);
   const settings = options.settings ? normalizeProxyAutoSettings(options.settings) : await loadProxyAutoSettings(env);
   const previousState = await loadProxyAutoState(env);
-  const startedAt = (/* @__PURE__ */ new Date()).toISOString();
+  const startedAt = (new Date()).toISOString();
   const baseState = {
     version: 1,
     trigger,
@@ -2169,7 +2149,7 @@ async function hmacHex(secret, message) {
 }
 __name(hmacHex, "hmacHex");
 function getAdminPassword(env) {
-  const password = String(env?.ADMIN || env?.admin || "").trim();
+  const password = String(env?.ADMIN || "").trim();
   if (!password) {
     throw new Error("ADMIN secret is required");
   }
@@ -2202,8 +2182,7 @@ function equalText(left, right) {
 __name(equalText, "equalText");
 async function makeSessionToken(env) {
   const password = getAdminPassword(env);
-  const secret = String(env?.COOKIE_SECRET || password);
-  return hmacHex(secret, `worker-slim-admin:${password}`);
+  return hmacHex(password, `worker-slim-admin:${password}`);
 }
 __name(makeSessionToken, "makeSessionToken");
 function getAdminRequestPassword(request) {
@@ -2323,13 +2302,6 @@ async function handleLogin(request, env, redirectTo = ROUTES.ADMIN_ROOT) {
   return response;
 }
 __name(handleLogin, "handleLogin");
-function loginRedirect(target = ROUTES.ADMIN_ROOT) {
-  return new Response("Redirecting", {
-    status: 302,
-    headers: { Location: target, "Cache-Control": "no-store" }
-  });
-}
-__name(loginRedirect, "loginRedirect");
 var PRIMARY_PROTOCOL = "vless";
 function uriHost(endpoint) {
   return endpoint.isIPv6 || String(endpoint.hostname).includes(":") ? `[${endpoint.hostname}]` : endpoint.hostname;
@@ -2428,9 +2400,7 @@ function wantsBase64Subscription(request, url) {
 }
 __name(wantsBase64Subscription, "wantsBase64Subscription");
 function getSubscriptionConverterBaseUrl(env) {
-  return normalizeOptionalUrl(
-    readOptionalEnvString(env, ["SUB_CONVERTER_URL", "sub_converter_url", "SUB_CONVERTER", "sub_converter"]) || DEFAULT_SUB_CONVERTER_URL
-  );
+  return normalizeOptionalUrl(envText(env, "SUB_CONVERTER_URL") || DEFAULT_SUB_CONVERTER_URL);
 }
 __name(getSubscriptionConverterBaseUrl, "getSubscriptionConverterBaseUrl");
 function buildConvertedSubscriptionUrl(url, env, target, token) {
@@ -2573,8 +2543,8 @@ async function renderStaticAdminPage(request, env, adminBasePath) {
   }
   const bootstrap = `<script>window.IP168_BOOTSTRAP=${safeScriptJson(buildAdminBootstrap(request.url, adminBasePath, env))};<\/script>`;
   let html = upstream.html;
-  if (html.includes("<!--IP168_BOOTSTRAP-->")) {
-    html = html.replace("<!--IP168_BOOTSTRAP-->", bootstrap);
+  if (html.includes('<script id="ip168-bootstrap-anchor"></script>')) {
+    html = html.replace('<script id="ip168-bootstrap-anchor"></script>', bootstrap);
   } else if (/<\/head>/i.test(html)) {
     html = html.replace(/<\/head>/i, `${bootstrap}</head>`);
   } else {
@@ -2583,10 +2553,6 @@ async function renderStaticAdminPage(request, env, adminBasePath) {
   return htmlResponse(html);
 }
 __name(renderStaticAdminPage, "renderStaticAdminPage");
-function renderMissingSetupPage(message) {
-  return `<!doctype html><html lang="en"><meta charset="utf-8"><title>Under Construction</title><body><h1>Under Construction</h1><p>${escapeHtml(message)}</p></body></html>`;
-}
-__name(renderMissingSetupPage, "renderMissingSetupPage");
 var decoder = new TextDecoder("utf-8", { fatal: true });
 function ensureAvailable(bytes, offset, length) {
   if (offset + length > bytes.byteLength) {
@@ -2674,6 +2640,14 @@ function withTimeout(promise, timeoutMs, message) {
   return Promise.race([promise, timeout]).finally(() => clearTimeout(timeoutId));
 }
 __name(withTimeout, "withTimeout");
+function safeReleaseLock(lock, label) {
+  try {
+    lock.releaseLock();
+  } catch (error) {
+    console.warn(`[${label}] release failed`, error);
+  }
+}
+__name(safeReleaseLock, "safeReleaseLock");
 function concatBytes2(left, right) {
   const output = new Uint8Array(left.byteLength + right.byteLength);
   output.set(left, 0);
@@ -2750,7 +2724,7 @@ function parseProbeTargets(rawTargets, maxTargets = 50) {
   const values = source.flatMap((item) => String(item || "").split(/[\r\n\t,;]+/)).map((item) => item.trim()).filter(Boolean);
   const endpoints = [];
   const invalid = [];
-  const seen = /* @__PURE__ */ new Set();
+  const seen = new Set();
   for (const value of values) {
     if (endpoints.length >= maxTargets) {
       break;
@@ -2831,7 +2805,7 @@ Connection: close\r
   await tls.write(requestBytes);
   let responseBuffer = new Uint8Array(0);
   while (responseBuffer.byteLength < PROXYIP_TRACE_MAX_BYTES) {
-    const chunk = await withTimeout(tls.read(), timeoutMs, "trace read timeout");
+    const chunk = await tls.read();
     if (!chunk || !chunk.byteLength) {
       break;
     }
@@ -2887,7 +2861,7 @@ Connection: close\r
     await tls.write(requestBytes);
     let responseBuffer = new Uint8Array(0);
     while (responseBuffer.byteLength < PROXYIP_TRACE_MAX_BYTES) {
-      const chunk = await withTimeout(tls.read(), timeoutMs, "google read timeout");
+      const chunk = await tls.read();
       if (!chunk || !chunk.byteLength) {
         break;
       }
@@ -2896,7 +2870,7 @@ Connection: close\r
       if (status !== null) {
         return {
           googleMs: Date.now() - started,
-          googleOk: status >= 200 && status < 300,
+          googleOk: status >= 200 && status < 500,
           googleStatus: status,
           googleError: null
         };
@@ -2906,7 +2880,7 @@ Connection: close\r
     if (status !== null) {
       return {
         googleMs: Date.now() - started,
-        googleOk: status >= 200 && status < 300,
+        googleOk: status >= 200 && status < 500,
         googleStatus: status,
         googleError: null
       };
@@ -2939,25 +2913,24 @@ async function probeProxyEndpoint(endpoint, workerHostname, timeoutMs) {
       `TCP connect timeout: ${formatEndpoint(endpoint)}`
     );
     const connectMs = Date.now() - started;
-    const trace = await traceProxyEndpoint(socket, timeoutMs);
-    const google = await googleProxyEndpointCheck(endpoint, timeoutMs);
-    if (!google.googleOk) {
-      return {
-        proxy: formatEndpoint(endpoint),
-        ok: false,
-        connectMs,
-        ...trace,
-        ...google,
-        error: google.googleError || `google HTTP ${google.googleStatus || "unknown"}`
-      };
+    let trace = {};
+    let traceError = null;
+    try {
+      trace = await traceProxyEndpoint(socket, timeoutMs);
+    } catch (error) {
+      traceError = String(error?.message || error || "trace check failed").slice(0, 200);
     }
+    const google = await googleProxyEndpointCheck(endpoint, timeoutMs);
+    const traceOk = Boolean(trace.exitIp && trace.loc);
+    const ok = Boolean(traceOk || google.googleOk);
     return {
       proxy: formatEndpoint(endpoint),
-      ok: true,
+      ok,
       connectMs,
       ...trace,
       ...google,
-      error: null
+      traceError,
+      error: ok ? null : traceError || google.googleError || "proxy check failed"
     };
   } catch (error) {
     return {
@@ -3090,7 +3063,7 @@ function addProxyCandidate(candidates, seen, endpoint, configured) {
 __name(addProxyCandidate, "addProxyCandidate");
 function buildProxyDialCandidates(configuredProxies, disabledKeys) {
   const candidates = [];
-  const seen = /* @__PURE__ */ new Set();
+  const seen = new Set();
   const disabled = disabledKeys instanceof Set ? disabledKeys : new Set(disabledKeys || []);
   for (const proxy of configuredProxies) {
     if (!disabled.has(endpointKey(proxy))) {
@@ -3199,7 +3172,7 @@ async function handleWebSocket(request, env, config, url) {
     const runtimeProxy = await loadRuntimeProxyInfo(env, config);
     const configuredProxies = runtimeProxy.endpoints;
     const proxyMode = runtimeProxy.proxyMode;
-    const proxyHealth = configuredProxies.length ? await loadProxyHealth(env, config, Date.now(), { useCacheOnly: true }) : { disabledKeys: /* @__PURE__ */ new Set() };
+    const proxyHealth = configuredProxies.length ? await loadProxyHealth(env, config, Date.now(), { useCacheOnly: true }) : { disabledKeys: new Set() };
     const proxyCandidates = buildProxyDialCandidates(configuredProxies, proxyHealth.disabledKeys);
     let firstResponseChunk = null;
     let initialPayloadWritten = false;
@@ -3295,7 +3268,7 @@ async function handleWebSocket(request, env, config, url) {
       }
       const runtimeProxy = await loadRuntimeProxyInfo(env, config);
       const configuredProxies = runtimeProxy.endpoints;
-      const proxyHealth = configuredProxies.length ? await loadProxyHealth(env, config, Date.now(), { useCacheOnly: true }) : { disabledKeys: /* @__PURE__ */ new Set() };
+      const proxyHealth = configuredProxies.length ? await loadProxyHealth(env, config, Date.now(), { useCacheOnly: true }) : { disabledKeys: new Set() };
       const proxyCandidates = buildProxyDialCandidates(configuredProxies, proxyHealth.disabledKeys);
       const firstPayloadKind = classifyFirstPayloadForProxy(parsed.initialPayload);
       if (!parsed.initialPayload.byteLength && proxyCandidates.length) {
@@ -3445,7 +3418,7 @@ async function handleProxyIpProbe(request, env, url) {
   } catch (error) {
     return jsonResponse({ success: false, error: "invalid JSON" }, { status: 400 });
   }
-  const timeoutMs = clampNumber(body.timeoutMs, 3000, 1e3, 3e3);
+  const timeoutMs = clampNumber(body.timeoutMs, 3000, 1e3, 8e3);
   const concurrency = clampNumber(body.concurrency, 4, 1, 8);
   const { endpoints, invalid } = parseProbeTargets(body.targets, 50);
   if (!endpoints.length && !invalid.length) {
@@ -3478,7 +3451,7 @@ async function handleProxyIpAuto(request, env, url) {
       success: true,
       settings,
       state,
-      currentProxyip: settings.enabled !== false ? proxyAutoStateProxyip(state) : String(getProxyConfig(config).PROXYIP || "").trim()
+      currentProxyip: currentProxyipForAdmin(settings, state, config)
     });
   }
   if (request.method === "POST") {
@@ -3519,7 +3492,7 @@ async function handleProxyIpAutoRun(request, env, url) {
     const incomingSettings = body.settings && typeof body.settings === "object" ? { ...body.settings, enabled: true } : { enabled: true };
     const settings = await saveProxyAutoSettings(env, incomingSettings);
     const previousState = await loadProxyAutoState(env);
-    const timestamp = (/* @__PURE__ */ new Date()).toISOString();
+    const timestamp = (new Date()).toISOString();
     const state = await saveProxyAutoState(env, buildProxyAutoState(previousState, {
       version: 1,
       trigger: String(body.trigger || "manual"),
@@ -3574,7 +3547,10 @@ async function handleAdmin(request, env, url, basePath = ROUTES.ADMIN_ROOT) {
     if ((request.method === "GET" || request.method === "POST") && (url.pathname === adminBasePath || url.pathname === adminRootPath || url.pathname === adminLoginPath)) {
       return await handleLogin(request, env, adminBasePath);
     }
-    return loginRedirect(adminBasePath);
+    return new Response("Redirecting", {
+      status: 302,
+      headers: { Location: adminBasePath, "Cache-Control": "no-store" }
+    });
   }
   if (url.pathname === adminLoginPath) {
     return await handleLogin(request, env, adminBasePath);
@@ -3604,7 +3580,7 @@ async function handleAdmin(request, env, url, basePath = ROUTES.ADMIN_ROOT) {
       success: true,
       config: withRenderedLink(config),
       addText,
-      currentProxyip: settings.enabled !== false ? proxyAutoStateProxyip(autoState) : String(getProxyConfig(config).PROXYIP || "").trim(),
+      currentProxyip: currentProxyipForAdmin(settings, autoState, config),
       proxyAuto: { settings, state: autoState }
     }));
   }
@@ -3640,7 +3616,7 @@ async function handleAdmin(request, env, url, basePath = ROUTES.ADMIN_ROOT) {
       success: true,
       config: withRenderedLink(config),
       addText,
-      currentProxyip: settings.enabled !== false ? proxyAutoStateProxyip(autoState) : String(getProxyConfig(config).PROXYIP || "").trim(),
+      currentProxyip: currentProxyipForAdmin(settings, autoState, config),
       proxyAuto: { settings, state: autoState }
     }));
   }
@@ -3660,11 +3636,11 @@ async function handleAdmin(request, env, url, basePath = ROUTES.ADMIN_ROOT) {
     }
     return withAdminCors(new Response("Method Not Allowed", { status: 405 }));
   }
-  if (url.pathname === adminProxyCatalogPath || url.pathname.startsWith(`${adminProxyCatalogPath}/`)) {
-    return withAdminCors(await handleProxyIpCatalog(request, env, url, adminProxyCatalogPath));
-  }
   if (url.pathname === adminProxyTestPath) {
     return withAdminCors(await handleProxyIpProbe(request, env, url));
+  }
+  if (url.pathname === adminProxyCatalogPath || url.pathname.startsWith(`${adminProxyCatalogPath}/`)) {
+    return withAdminCors(await handleProxyIpCatalog(request, env, url, adminProxyCatalogPath));
   }
   if (url.pathname === adminProxyAutoPath) {
     return withAdminCors(await handleProxyIpAuto(request, env, url));
@@ -3726,7 +3702,9 @@ var worker_ip168_proxy_mode_default = {
         return await handleWebSocket(request, env, await loadConfig(env, url.hostname, { allowDefaultFallback: false }), url);
       }
       if (request.method === "GET" && url.pathname === ROUTES.PUBLIC_ROOT) {
-        return htmlResponse(renderMissingSetupPage(PUBLIC_UNDER_CONSTRUCTION_MESSAGE));
+        return new Response("This website is under construction.", {
+          headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" }
+        });
       }
       return new Response("Not Found", { status: 404 });
     } catch (error) {

@@ -26,12 +26,18 @@ test("ip168 source switches to the new kv key names", async () => {
 test("ip168 source defaults the admin root to /a and exposes the new short routes", async () => {
   const source = await readSource();
   assert.ok(source.includes('ADMIN_ROOT: "/a"'));
+  assert.ok(source.includes('ADMIN_ALIAS: "/admin"'));
   assert.ok(source.includes("/ht/dl"));
   assert.ok(source.includes("/pg/du"));
   assert.ok(source.includes("/pg/xie"));
   assert.ok(source.includes("/rk/du"));
   assert.ok(source.includes("/fd/zd/du"));
   assert.ok(source.includes("/fd/zd/ce"));
+});
+
+test("ip168 source accepts the legacy /admin alias for the admin entry", async () => {
+  const source = await readSource();
+  assert.ok(source.includes('const bases = [normalizePathAlias(basePath), ROUTES.ADMIN_ALIAS].filter(Boolean);'));
 });
 
 test("ip168 source removes legacy admin api routes", async () => {
@@ -87,6 +93,37 @@ test("repository does not contain known instance identifiers or secrets", async 
   }
 });
 
+test("ip168 source removes legacy env aliases and source comments", async () => {
+  const source = await readSource();
+  for (const legacy of [
+    "ADMIN_PATH_ALIAS",
+    "ADMIN_N",
+    "admin_path_alias",
+    "ENTRY_PATH_LIMIT",
+    "entry_path_limit",
+    "COOKIE_SECRET",
+    "env?.admin ||",
+    "sub_token",
+    '"TOKEN", "token"',
+    "env?.uuid",
+    "env?.host",
+    "entry_endpoints",
+    "ADD_TEXT",
+    "add_text",
+    '"SUB_CONVERTER", "sub_converter"',
+    "proxyip_catalog_",
+    "@__PURE__",
+    "/** @type",
+    "// worker-ip168-proxy-mode.js"
+  ]) {
+    assert.equal(source.includes(legacy), false, legacy);
+  }
+  const adminHtml = await readText("ip168-remote-admin-1c71e482.html");
+  assert.equal(adminHtml.includes("<!--IP168_BOOTSTRAP-->"), false);
+  assert.equal(adminHtml.includes("???"), false);
+  assert.equal(source.includes("<!--IP168_BOOTSTRAP-->"), false);
+});
+
 test("optional converter and proxy catalog defaults are empty for open-source builds", async () => {
   const source = await readSource();
   assert.ok(source.includes('var DEFAULT_SUB_CONVERTER_URL = "";'));
@@ -95,4 +132,78 @@ test("optional converter and proxy catalog defaults are empty for open-source bu
   assert.ok(source.includes('var PROXYIP_CATALOG_IPV6_URL = "";'));
   assert.ok(source.includes('var PROXYIP_CATALOG_QUERY_URL = "";'));
   assert.ok(source.includes("enabled: false"));
+});
+
+test("proxy auto normalization keeps the open-source default disabled", async () => {
+  const source = await readSource();
+  assert.equal(source.includes("enabled: hasCountry ? true : Boolean(input.enabled)"), false);
+  assert.ok(source.includes('const hasExplicitEnabled = Object.prototype.hasOwnProperty.call(input, "enabled");'));
+  assert.ok(source.includes("enabled: hasExplicitEnabled ? Boolean(input.enabled) : DEFAULT_PROXY_AUTO_SETTINGS.enabled"));
+});
+
+test("proxy probe route is not shadowed by proxy catalog route", async () => {
+  const source = await readSource();
+  const probeRoute = source.indexOf("if (url.pathname === adminProxyTestPath)");
+  const catalogRoute = source.indexOf("if (url.pathname === adminProxyCatalogPath || url.pathname.startsWith(`${adminProxyCatalogPath}/`))");
+  assert.notEqual(probeRoute, -1);
+  assert.notEqual(catalogRoute, -1);
+  assert.ok(probeRoute < catalogRoute);
+});
+
+test("proxy probe endpoint accepts the UI timeout range", async () => {
+  const source = await readSource();
+  assert.equal(source.includes("const timeoutMs = clampNumber(body.timeoutMs, 3000, 1e3, 3e3);"), false);
+  assert.ok(source.includes("const timeoutMs = clampNumber(body.timeoutMs, 3000, 1e3, 8e3);"));
+});
+
+test("proxy probe TLS reads do not mask timeouts with releaseLock errors", async () => {
+  const source = await readSource();
+  assert.equal(source.includes("withTimeout(tls.read()"), false);
+  assert.ok(source.includes("function safeReleaseLock(lock, label)"));
+  assert.ok(source.includes('safeReleaseLock(reader, "TLS reader")'));
+});
+
+test("proxy probe treats google HTTP 4xx as reachable instead of a transport failure", async () => {
+  const source = await readSource();
+  assert.equal(source.includes("googleOk: status >= 200 && status < 300"), false);
+  assert.ok(source.includes("googleOk: status >= 200 && status < 500"));
+});
+
+test("proxy probe availability accepts trace success or google reachability", async () => {
+  const source = await readSource();
+  assert.equal(source.includes("if (!google.googleOk)"), false);
+  assert.ok(source.includes("const google = await googleProxyEndpointCheck(endpoint, timeoutMs);"));
+  assert.ok(source.includes("const traceOk = Boolean(trace.exitIp && trace.loc);"));
+  assert.ok(source.includes("const ok = Boolean(traceOk || google.googleOk);"));
+});
+
+test("proxy probe still checks google when trace fails", async () => {
+  const source = await readSource();
+  assert.ok(source.includes("let trace = {};"));
+  assert.ok(source.includes("let traceError = null;"));
+  assert.ok(source.includes('traceError = String(error?.message || error || "trace check failed").slice(0, 200);'));
+  assert.ok(source.includes("const ok = Boolean(traceOk || google.googleOk);"));
+  assert.ok(source.includes("traceError,"));
+});
+
+test("proxy probe UI can show google latency when trace latency is missing", async () => {
+  const adminHtml = await readText("ip168-remote-admin-1c71e482.html");
+  assert.ok(adminHtml.includes("probe.googleMs"));
+  assert.ok(adminHtml.includes("result.googleMs"));
+});
+
+test("proxy probe UI does not turn auth failures into unavailable candidates", async () => {
+  const adminHtml = await readText("ip168-remote-admin-1c71e482.html");
+  assert.ok(adminHtml.includes("error.status = response.status;"));
+  assert.ok(adminHtml.includes("isAuthError(error)"));
+  assert.ok(adminHtml.includes("登录状态失效，请重新进入后台"));
+  assert.ok(adminHtml.includes('throw new Error("登录状态失效，请重新进入后台");'));
+});
+
+test("proxy probe UI shows concrete probe failure reason", async () => {
+  const adminHtml = await readText("ip168-remote-admin-1c71e482.html");
+  assert.ok(adminHtml.includes("function probeFailureText(result)"));
+  assert.ok(adminHtml.includes("result?.traceError"));
+  assert.ok(adminHtml.includes("result?.googleError"));
+  assert.equal(adminHtml.includes('if (!result.ok) return result.error ? "\\u4e0d\\u53ef\\u7528" : "\\u5931\\u8d25";'), false);
 });

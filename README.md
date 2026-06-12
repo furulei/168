@@ -16,15 +16,15 @@ This repository must not contain deployment-specific Cloudflare account IDs, KV 
 
 - KV binding: `KV`
 - Required secret: `ADMIN`
-- Optional admin entry override: `ADMIN_N` or `admin_n`
+- Optional admin entry override: `admin_n`
 - Default admin entry: `/a`
+- Compatibility admin entry: `/admin`
 - Subscription entry: `/sub`
 
-`ADMIN` is the admin password. `ADMIN_N`/`admin_n` is only the admin path alias, not a second admin password.
+`ADMIN` is the admin password. `admin_n` is only the admin path alias, not a second admin password.
 
 ## Optional Settings
 
-- `COOKIE_SECRET`: session cookie signing secret. Defaults to `ADMIN` if omitted.
 - `SUB_CONVERTER_URL`: Clash/Sing-box converter service URL. If omitted, normal and base64 subscriptions still work, but converted subscriptions return a clear configuration error.
 - `PROXYIP_CATALOG_SUMMARY_URL`: optional proxy catalog summary JSON URL.
 - `PROXYIP_CATALOG_IPV4_URL`: optional IPv4 proxy catalog JSON URL.
