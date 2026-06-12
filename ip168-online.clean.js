@@ -758,10 +758,10 @@ var PROXYIP_TRACE_HOST = "cloudflare.com";
 var PROXYIP_TRACE_PATH = "/cdn-cgi/trace";
 var PROXYIP_TRACE_MAX_BYTES = 64 * 1024;
 var DEFAULT_SUB_CONVERTER_URL = "";
-var DEFAULT_SUB_NAME = "\u5F52\u6765\u662F\u5C11\u5E74";
+var DEFAULT_SUB_NAME = "\u5F52\u6765\u4ECD\u5C11\u5E74";
 var ADMIN_PAGE_CACHE_TTL_SECONDS = 86400;
 var ADMIN_PAGE_KV_KEY = "ym:index.v6.html";
-var ADMIN_PAGE_KV_CACHE_VERSION = "2026-06-13-sub-v6";
+var ADMIN_PAGE_KV_CACHE_VERSION = "2026-06-13-sub-v7";
 var ADMIN_PAGE_KV_CACHE_TTL_MS = 24 * 60 * 60 * 1e3;
 var VENDOR_QRCODE_PATH = "/vendor/qrcode.min.js";
 var VENDOR_QRCODE_KV_KEY = "vendor/qrcode.min.js";
@@ -1065,7 +1065,8 @@ function assertAllowedDialTarget(endpoint, workerHostname = "") {
 }
 __name(assertAllowedDialTarget, "assertAllowedDialTarget");
 var PROXY_KEY = "\u53CD\u4EE3";
-var SUB_KEY = "\u4F18\u9009\u8BA2\u9605\u751F\u6210";
+var SUB_KEY = "\u8BA2\u9605\u751F\u6210";
+var SUB_KEY_LEGACY = "\u4F18\u9009\u8BA2\u9605\u751F\u6210";
 var FULL_PATH_KEY = "\u5B8C\u6574\u8282\u70B9\u8DEF\u5F84";
 function isUuid(value) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
@@ -1123,6 +1124,12 @@ function createDefaultConfig(requestHostname, env = {}) {
   const host = normalizeWorkerHost(env.HOST, requestHostname);
   const envProxyip = envText(env, "PROXYIP");
   const envToken = envText(env, "SUB_TOKEN");
+  const subscription = {
+    TOKEN: envToken || crypto.randomUUID().replace(/-/g, ""),
+    SUBNAME: DEFAULT_SUB_NAME,
+    SUBUpdateTime: DEFAULTS.ROTATE_HOURS,
+    local: true
+  };
   return {
     UUID: newUuid(env),
     HOST: host,
@@ -1138,20 +1145,28 @@ function createDefaultConfig(requestHostname, env = {}) {
       RotateHours: DEFAULTS.ROTATE_HOURS,
       FailTtlHours: DEFAULTS.PROXY_FAIL_TTL_HOURS
     },
-    [SUB_KEY]: {
-      TOKEN: envToken || crypto.randomUUID().replace(/-/g, ""),
-      SUBNAME: DEFAULT_SUB_NAME,
-      SUBUpdateTime: DEFAULTS.ROTATE_HOURS,
-      local: true
-    }
+    [SUB_KEY]: subscription,
+    [SUB_KEY_LEGACY]: subscription
   };
 }
 __name(createDefaultConfig, "createDefaultConfig");
+function getSubscriptionInputBlock(input) {
+  const current = input?.[SUB_KEY];
+  if (current && typeof current === "object") {
+    return current;
+  }
+  const legacy = input?.[SUB_KEY_LEGACY];
+  if (legacy && typeof legacy === "object") {
+    return legacy;
+  }
+  return {};
+}
+__name(getSubscriptionInputBlock, "getSubscriptionInputBlock");
 function normalizeConfig(rawConfig, requestHostname, env = {}) {
   const defaults = createDefaultConfig(requestHostname, env);
   const input = rawConfig && typeof rawConfig === "object" && !Array.isArray(rawConfig) ? rawConfig : {};
   const knownInput = {};
-  for (const key of ["UUID", "HOST", "HOSTS", "PATH", FULL_PATH_KEY, "LINK", "Fingerprint", PROXY_KEY, SUB_KEY]) {
+  for (const key of ["UUID", "HOST", "HOSTS", "PATH", FULL_PATH_KEY, "LINK", "Fingerprint", PROXY_KEY]) {
     if (Object.prototype.hasOwnProperty.call(input, key)) {
       knownInput[key] = input[key];
     }
@@ -1160,11 +1175,17 @@ function normalizeConfig(rawConfig, requestHostname, env = {}) {
   const host = normalizeWorkerHost(hostCandidate, requestHostname);
   const uuid = isUuid(input.UUID) ? String(input.UUID).toLowerCase() : defaults.UUID;
   const proxyInput = input[PROXY_KEY] && typeof input[PROXY_KEY] === "object" ? input[PROXY_KEY] : {};
-  const subInput = input[SUB_KEY] && typeof input[SUB_KEY] === "object" ? input[SUB_KEY] : {};
+  const subInput = getSubscriptionInputBlock(input);
   const rotateHoursRaw = Number(proxyInput.RotateHours);
   const rotateHours = Number.isFinite(rotateHoursRaw) && rotateHoursRaw > 0 ? Math.min(rotateHoursRaw, 168) : DEFAULTS.ROTATE_HOURS;
   const failTtlHoursRaw = Number(proxyInput.FailTtlHours);
   const failTtlHours = Number.isFinite(failTtlHoursRaw) && failTtlHoursRaw > 0 ? Math.min(failTtlHoursRaw, 720) : DEFAULTS.PROXY_FAIL_TTL_HOURS;
+  const subscription = {
+    ...defaults[SUB_KEY],
+    ...subInput,
+    TOKEN: String(subInput.TOKEN || defaults[SUB_KEY].TOKEN).trim(),
+    SUBNAME: String(subInput.SUBNAME || defaults[SUB_KEY].SUBNAME).trim() || DEFAULT_SUB_NAME
+  };
   const config = {
     ...defaults,
     ...knownInput,
@@ -1180,14 +1201,10 @@ function normalizeConfig(rawConfig, requestHostname, env = {}) {
       Mode: normalizeProxyMode(proxyInput.Mode || defaults[PROXY_KEY].Mode),
       RotateHours: rotateHours,
       FailTtlHours: failTtlHours
-    },
-    [SUB_KEY]: {
-      ...defaults[SUB_KEY],
-      ...subInput,
-      TOKEN: String(subInput.TOKEN || defaults[SUB_KEY].TOKEN).trim(),
-      SUBNAME: String(subInput.SUBNAME || defaults[SUB_KEY].SUBNAME).trim() || DEFAULT_SUB_NAME
     }
   };
+  config[SUB_KEY] = subscription;
+  config[SUB_KEY_LEGACY] = subscription;
   delete config.ECH;
   delete config.ECHConfig;
   config[FULL_PATH_KEY] = makeWsPath(config);
@@ -1199,7 +1216,15 @@ function getProxyConfig(config) {
 }
 __name(getProxyConfig, "getProxyConfig");
 function getSubscriptionConfig(config) {
-  return config[SUB_KEY] || {};
+  const current = config[SUB_KEY];
+  if (current && typeof current === "object") {
+    return current;
+  }
+  const legacy = config[SUB_KEY_LEGACY];
+  if (legacy && typeof legacy === "object") {
+    return legacy;
+  }
+  return {};
 }
 __name(getSubscriptionConfig, "getSubscriptionConfig");
 function requireKv(env) {
