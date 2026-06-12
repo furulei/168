@@ -2008,6 +2008,7 @@
       if (!token) return "";
       const url = new URL(bootstrap.subPath, bootstrap.workerOrigin);
       url.searchParams.set("token", token);
+      url.searchParams.set("v", "2026-06-13-v6");
       if (flag) {
         url.searchParams.set(flag, "");
       }
