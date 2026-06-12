@@ -759,8 +759,10 @@ var DEFAULT_SUB_CONVERTER_URL = "";
 var DEFAULT_SUB_NAME = "\u5F52\u6765\u662F\u5C11\u5E74";
 var ADMIN_PAGE_CACHE_TTL_SECONDS = 86400;
 var ADMIN_PAGE_KV_KEY = "ym:index.html";
-var ADMIN_PAGE_KV_CACHE_VERSION = "2026-06-10-probe-auth-errors";
+var ADMIN_PAGE_KV_CACHE_VERSION = "2026-06-13-qrcode-local";
 var ADMIN_PAGE_KV_CACHE_TTL_MS = 24 * 60 * 60 * 1e3;
+var VENDOR_QRCODE_PATH = "/vendor/qrcode.min.js";
+var VENDOR_QRCODE_KV_KEY = "vendor/qrcode.min.js";
 var DEFAULT_PROXY_AUTO_SETTINGS = Object.freeze({
   enabled: false,
   ipVersion: "4",
@@ -2553,6 +2555,19 @@ async function renderStaticAdminPage(request, env, adminBasePath) {
   return htmlResponse(html);
 }
 __name(renderStaticAdminPage, "renderStaticAdminPage");
+async function renderQrCodeVendorAsset(env) {
+  const js = await readCachedKvText(env, VENDOR_QRCODE_KV_KEY, ADMIN_PAGE_KV_CACHE_TTL_MS, { allowFallback: false });
+  if (!js) {
+    return new Response("Not Found", { status: 404 });
+  }
+  return new Response(js, {
+    headers: {
+      "Content-Type": "application/javascript; charset=utf-8",
+      "Cache-Control": "public, max-age=86400"
+    }
+  });
+}
+__name(renderQrCodeVendorAsset, "renderQrCodeVendorAsset");
 var decoder = new TextDecoder("utf-8", { fatal: true });
 function ensureAvailable(bytes, offset, length) {
   if (offset + length > bytes.byteLength) {
@@ -3380,6 +3395,7 @@ function proxyIpCatalogSource(kind, env) {
   if (normalized === "summary") return getProxyIpCatalogUrl(env, "summary");
   if (normalized === "ipv4" || normalized === "v4" || normalized === "4") return getProxyIpCatalogUrl(env, "ipv4");
   if (normalized === "ipv6" || normalized === "v6" || normalized === "6") return getProxyIpCatalogUrl(env, "ipv6");
+  if (normalized === "query") return getProxyIpCatalogUrl(env, "query");
   return "";
 }
 __name(proxyIpCatalogSource, "proxyIpCatalogSource");
@@ -3692,6 +3708,9 @@ var worker_ip168_proxy_mode_default = {
       }
       const adminBasePath = getAdminBasePath(env);
       const adminEntryBasePath = getAdminEntryBasePath(url.pathname, adminBasePath);
+      if (request.method === "GET" && url.pathname === VENDOR_QRCODE_PATH) {
+        return await renderQrCodeVendorAsset(env);
+      }
       if (url.pathname === ROUTES.SUBSCRIPTION) {
         return await handleSubscription(request, env, url);
       }
