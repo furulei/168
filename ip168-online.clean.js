@@ -708,6 +708,8 @@ var PROXY_HEALTH_KV_KEY = "fd.jk.json";
 var PROXY_AUTO_KV_KEY = "fd.zd.json";
 var PROXY_AUTO_STATE_KV_KEY = "fd.zt.json";
 var SUB_RATE_LIMIT_PREFIX = "SUB.rate.";
+var SUB_RESPONSE_CACHE_TTL_SECONDS = 300;
+var SUB_URL_VERSION = "2026-06-13-v6";
 var DEFAULTS = Object.freeze({
   DEFAULT_PORT: 443,
   CONNECT_TIMEOUT_MS: 8e3,
@@ -758,8 +760,8 @@ var PROXYIP_TRACE_MAX_BYTES = 64 * 1024;
 var DEFAULT_SUB_CONVERTER_URL = "";
 var DEFAULT_SUB_NAME = "\u5F52\u6765\u662F\u5C11\u5E74";
 var ADMIN_PAGE_CACHE_TTL_SECONDS = 86400;
-var ADMIN_PAGE_KV_KEY = "ym:index.html";
-var ADMIN_PAGE_KV_CACHE_VERSION = "2026-06-13-qrcode-local";
+var ADMIN_PAGE_KV_KEY = "ym:index.v6.html";
+var ADMIN_PAGE_KV_CACHE_VERSION = "2026-06-13-sub-v6";
 var ADMIN_PAGE_KV_CACHE_TTL_MS = 24 * 60 * 60 * 1e3;
 var VENDOR_QRCODE_PATH = "/vendor/qrcode.min.js";
 var VENDOR_QRCODE_KV_KEY = "vendor/qrcode.min.js";
@@ -2379,6 +2381,7 @@ function subscriptionResponseHeaders(config, url, env, contentType = TEXT_HEADER
   const headers = {
     ...TEXT_HEADERS,
     "Content-Type": contentType,
+    "Cache-Control": "no-store",
     "Profile-Title": makeProfileTitleHeaderValue(subName),
     "Profile-Update-Interval": String(updateHours),
     "Profile-web-page-url": `${url.origin}${getAdminBasePath(env)}`
@@ -2401,6 +2404,60 @@ function wantsBase64Subscription(request, url) {
   return Boolean(ua && !ua.includes("mozilla"));
 }
 __name(wantsBase64Subscription, "wantsBase64Subscription");
+function subscriptionOutputKind(request, url) {
+  if (url.searchParams.has("clash")) {
+    return "clash";
+  }
+  if (url.searchParams.has("sb") || url.searchParams.has("singbox")) {
+    return "singbox";
+  }
+  return wantsBase64Subscription(request, url) ? "b64" : "mixed";
+}
+__name(subscriptionOutputKind, "subscriptionOutputKind");
+function subscriptionCacheRequest(request, url, outputKind) {
+  const cacheUrl = new URL(url.href);
+  cacheUrl.searchParams.sort();
+  cacheUrl.searchParams.set("__ip168_output", outputKind);
+  return new Request(cacheUrl.href, { method: "GET" });
+}
+__name(subscriptionCacheRequest, "subscriptionCacheRequest");
+function responseWithHeaders(response, headersPatch = {}) {
+  const headers = new Headers(response.headers);
+  for (const [key, value] of Object.entries(headersPatch)) {
+    headers.set(key, value);
+  }
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers
+  });
+}
+__name(responseWithHeaders, "responseWithHeaders");
+async function matchSubscriptionCache(request, url, outputKind) {
+  if (!outputKind || !globalThis.caches?.default) {
+    return null;
+  }
+  const cached = await globalThis.caches.default.match(subscriptionCacheRequest(request, url, outputKind));
+  return cached ? responseWithHeaders(cached, { "X-IP168-Cache": "HIT", "Cache-Control": "no-store" }) : null;
+}
+__name(matchSubscriptionCache, "matchSubscriptionCache");
+async function cacheSubscriptionResponse(request, url, outputKind, response, ctx) {
+  if (!outputKind || !globalThis.caches?.default || response.status !== 200) {
+    return response;
+  }
+  const headersPatch = {
+    "Cache-Control": `public, max-age=${SUB_RESPONSE_CACHE_TTL_SECONDS}, s-maxage=${SUB_RESPONSE_CACHE_TTL_SECONDS}`,
+    "X-IP168-Cache": "MISS"
+  };
+  const cacheResponse = responseWithHeaders(response.clone(), headersPatch);
+  const outgoing = responseWithHeaders(response, { "X-IP168-Cache": "MISS" });
+  const putPromise = globalThis.caches.default.put(subscriptionCacheRequest(request, url, outputKind), cacheResponse).catch((error) => {
+    console.warn("[subscription-cache] put failed", error);
+  });
+  await putPromise;
+  return outgoing;
+}
+__name(cacheSubscriptionResponse, "cacheSubscriptionResponse");
 function getSubscriptionConverterBaseUrl(env) {
   return normalizeOptionalUrl(envText(env, "SUB_CONVERTER_URL") || DEFAULT_SUB_CONVERTER_URL);
 }
@@ -2413,6 +2470,7 @@ function buildConvertedSubscriptionUrl(url, env, target, token) {
   const sourceUrl = new URL(ROUTES.SUBSCRIPTION, url.origin);
   sourceUrl.searchParams.set("token", token);
   sourceUrl.searchParams.set("b64", "");
+  sourceUrl.searchParams.set("v", SUB_URL_VERSION);
   const outputPath = target === "singbox" ? "/singbox" : "/clash";
   const convertedUrl = new URL(outputPath, `${converterBase}/`);
   convertedUrl.searchParams.set("config", sourceUrl.href);
@@ -2545,6 +2603,10 @@ async function renderStaticAdminPage(request, env, adminBasePath) {
   }
   const bootstrap = `<script>window.IP168_BOOTSTRAP=${safeScriptJson(buildAdminBootstrap(request.url, adminBasePath, env))};<\/script>`;
   let html = upstream.html;
+  html = html.replace(/url\.searchParams\.set\("v",\s*"2026-06-13-v[2-5]"\);/g, `url.searchParams.set("v", "${SUB_URL_VERSION}");`);
+  if (!html.includes(`url.searchParams.set("v", "${SUB_URL_VERSION}")`) && html.includes('url.searchParams.set("token", token);')) {
+    html = html.replace('url.searchParams.set("token", token);', `url.searchParams.set("token", token);\n      url.searchParams.set("v", "${SUB_URL_VERSION}");`);
+  }
   if (html.includes('<script id="ip168-bootstrap-anchor"></script>')) {
     html = html.replace('<script id="ip168-bootstrap-anchor"></script>', bootstrap);
   } else if (/<\/head>/i.test(html)) {
@@ -3667,9 +3729,14 @@ async function handleAdmin(request, env, url, basePath = ROUTES.ADMIN_ROOT) {
   return new Response("Not Found", { status: 404 });
 }
 __name(handleAdmin, "handleAdmin");
-async function handleSubscription(request, env, url) {
+async function handleSubscription(request, env, url, ctx) {
   if (request.method !== "GET") {
     return new Response("Method Not Allowed", { status: 405 });
+  }
+  const outputKind = subscriptionOutputKind(request, url);
+  const cached = await matchSubscriptionCache(request, url, outputKind);
+  if (cached) {
+    return cached;
   }
   const limited = enforceSubscriptionRateLimit(request);
   if (limited) {
@@ -3681,25 +3748,30 @@ async function handleSubscription(request, env, url) {
     return new Response("Forbidden", { status: 403 });
   }
   if (url.searchParams.has("clash")) {
-    return await fetchConvertedSubscriptionResponse(config, url, env, "clash", token, request);
+    const response = await fetchConvertedSubscriptionResponse(config, url, env, "clash", token, request);
+    return await cacheSubscriptionResponse(request, url, outputKind, response, ctx);
   }
   if (url.searchParams.has("sb") || url.searchParams.has("singbox")) {
-    return await fetchConvertedSubscriptionResponse(config, url, env, "singbox", token, request);
+    const response = await fetchConvertedSubscriptionResponse(config, url, env, "singbox", token, request);
+    return await cacheSubscriptionResponse(request, url, outputKind, response, ctx);
   }
   const addText = await loadEntryEndpointsText(env);
   const records = buildNodeRecords(config, addText);
+  let response;
   if (wantsBase64Subscription(request, url)) {
-    return new Response(renderBase64Subscription(records), {
+    response = new Response(renderBase64Subscription(records), {
       headers: subscriptionResponseHeaders(config, url, env, TEXT_HEADERS["Content-Type"], request)
     });
+    return await cacheSubscriptionResponse(request, url, outputKind, response, ctx);
   }
-  return new Response(renderMixedSubscription(records), {
+  response = new Response(renderMixedSubscription(records), {
     headers: subscriptionResponseHeaders(config, url, env, TEXT_HEADERS["Content-Type"], request)
   });
+  return await cacheSubscriptionResponse(request, url, outputKind, response, ctx);
 }
 __name(handleSubscription, "handleSubscription");
 var worker_ip168_proxy_mode_default = {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
     try {
       if (url.protocol === "http:") {
@@ -3712,7 +3784,7 @@ var worker_ip168_proxy_mode_default = {
         return await renderQrCodeVendorAsset(env);
       }
       if (url.pathname === ROUTES.SUBSCRIPTION) {
-        return await handleSubscription(request, env, url);
+        return await handleSubscription(request, env, url, ctx);
       }
       if (adminEntryBasePath) {
         return await handleAdmin(request, env, url, adminEntryBasePath);
