@@ -1561,8 +1561,9 @@
     let proxyipManualDraft = "";
     const AUTO_RUN_CANDIDATE_LIMIT = 500;
     const AUTO_RUN_IMPORT_LIMIT = 9;
-    const AUTO_RUN_TEST_BATCH_SIZE = 20;
-    const AUTO_RUN_TEST_CONCURRENCY = 4;
+    const AUTO_RUN_TEST_BATCH_SIZE = 8;
+    const AUTO_RUN_TEST_CONCURRENCY = 8;
+    const AUTO_RUN_TEST_TIMEOUT_MS = 1000;
 
     if (!injected) {
       document.body.classList.add("missing-entry");
@@ -2706,7 +2707,7 @@
         try {
           data = await postJson(bootstrap.endpoints.proxyTest, {
             targets: chunk,
-            timeoutMs: normalizedNumber(fields.autoTimeoutMs, 8000, 1000, 8000),
+            timeoutMs: AUTO_RUN_TEST_TIMEOUT_MS,
             concurrency: AUTO_RUN_TEST_CONCURRENCY
           });
         } catch (error) {
@@ -2825,7 +2826,7 @@
       fields.autoCandidateLimit.value = settings.candidateLimit ?? 50;
       fields.autoSaveCount.value = settings.saveCount ?? 3;
       fields.failureThreshold.value = settings.failureThreshold ?? 3;
-      fields.autoTimeoutMs.value = settings.timeoutMs ?? 8000;
+      fields.autoTimeoutMs.value = settings.timeoutMs ?? 1000;
       fields.autoConcurrency.value = settings.concurrency ?? 4;
       fields.autoHealCooldownMinutes.value = settings.autoHealCooldownMinutes ?? 10;
       fields.standbyGroupCount.value = settings.standbyGroupCount ?? 2;
@@ -2848,7 +2849,7 @@
         candidateLimit: normalizedNumber(fields.autoCandidateLimit, 50, 1, 50),
         saveCount: normalizedNumber(fields.autoSaveCount, 3, 1, 10),
         failureThreshold: normalizedNumber(fields.failureThreshold, 3, 1, 10),
-        timeoutMs: normalizedNumber(fields.autoTimeoutMs, 8000, 1000, 8000),
+        timeoutMs: normalizedNumber(fields.autoTimeoutMs, 1000, 1000, 8000),
         concurrency: normalizedNumber(fields.autoConcurrency, 4, 1, 8),
         autoHealCooldownMinutes: normalizedNumber(fields.autoHealCooldownMinutes, 10, 1, 120),
         standbyGroupCount: normalizedNumber(fields.standbyGroupCount, 2, 1, 5),
