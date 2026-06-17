@@ -690,27 +690,26 @@
       min-height: var(--control-height);
       padding: 0 10px;
     }
-    .compact-qr-panel {
+    .compact-sub-panel {
       align-self: stretch;
       display: grid;
       place-items: center;
-      min-height: 428px;
     }
-    .qr-area {
+    .sub-name-area {
       display: grid;
       justify-items: center;
       align-content: center;
       gap: 14px;
       width: 100%;
     }
-    .qr-name-row {
+    .sub-name-row {
       display: grid;
       grid-template-columns: minmax(0, 1fr) 72px;
       gap: 8px;
       align-items: center;
       width: min(320px, 100%);
     }
-    .qr-sub-name-input {
+    .sub-name-input {
       width: 100%;
       min-height: 46px;
       margin: 0;
@@ -725,30 +724,17 @@
       color: var(--text);
       text-align: center;
     }
-    .qr-sub-name-input:hover,
-    .qr-sub-name-input:focus {
+    .sub-name-input:hover,
+    .sub-name-input:focus {
       border: 1px solid var(--line);
       background: var(--control-bg);
       transform: translateY(-1px);
     }
-    .qr-save-name {
+    .sub-save-name {
       width: 100%;
       min-width: 0;
       min-height: 46px;
       padding: 1px 6px;
-    }
-    .qr-box {
-      display: grid;
-      place-items: center;
-      width: min(320px, 100%);
-      aspect-ratio: 1;
-      border: 1px solid var(--line);
-      border-radius: 4px;
-      background: var(--panel-soft);
-    }
-    .qr-box canvas {
-      width: 100%;
-      height: 100%;
     }
     .table-wrap {
       width: 100%;
@@ -1188,7 +1174,7 @@
       header,
       .layout,
       .split,
-      .qr-area,
+      .sub-name-area,
       .proxy-controls,
       .proxy-editors {
         grid-template-columns: 1fr;
@@ -1367,14 +1353,11 @@
           <div id="links" class="link-list"></div>
         </section>
 
-        <section class="panel compact-qr-panel">
-          <div class="qr-area">
-            <div class="qr-name-row">
-              <input id="subName" class="qr-sub-name-input" spellcheck="false" autocomplete="off" aria-label="订阅名称">
-              <button id="saveSubName" class="qr-save-name secondary" type="button">保存</button>
-            </div>
-            <div class="qr-box">
-              <canvas id="qrCanvas" width="320" height="320"></canvas>
+        <section class="panel compact-sub-panel">
+          <div class="sub-name-area">
+            <div class="sub-name-row">
+              <input id="subName" class="sub-name-input" spellcheck="false" autocomplete="off" aria-label="订阅名称">
+              <button id="saveSubName" class="sub-save-name secondary" type="button">保存</button>
             </div>
           </div>
         </section>
@@ -1568,7 +1551,6 @@
   </div>
   <div id="saveNotice" class="save-notice" role="status" aria-live="polite">已保存</div>
 
-  <script src="/vendor/qrcode.min.js"></script>
   <script>
     const injected = window.IP168_BOOTSTRAP;
     const app = document.getElementById("app");
@@ -1589,9 +1571,8 @@
       throw new Error("IP168 bootstrap is missing");
     }
 
-    const PROXY_KEY = "\u53cd\u4ee3";
-    const SUB_KEY = "\u8ba2\u9605\u751f\u6210";
-    const SUB_KEY_LEGACY = "\u4f18\u9009\u8ba2\u9605\u751f\u6210";
+    const PROXY_KEY = "proxy";
+    const SUB_KEY = "sub";
     const DEFAULT_SUB_NAME = "\u5f52\u6765\u4ecd\u5c11\u5e74";
     const bootstrap = injected;
     const adminBase = bootstrap.adminBase || "/a";
@@ -1629,8 +1610,7 @@
         ok: 0
       },
       catalogSummary: null,
-      links: {},
-      qrUrl: ""
+      links: {}
     };
 
     const fields = {
@@ -1964,7 +1944,7 @@
 
     function fillForm(config, addText) {
       const proxy = config[PROXY_KEY] || {};
-      const sub = config[SUB_KEY] || config[SUB_KEY_LEGACY] || {};
+      const sub = config[SUB_KEY] || {};
       fields.host.value = config.HOST || "";
       fields.uuid.value = config.UUID || "";
       fields.token.value = sub.TOKEN || "";
@@ -1981,14 +1961,12 @@
     function readConfigFromForm() {
       const config = clone(state.config);
       const proxy = { ...(config[PROXY_KEY] || {}) };
-      const sub = { ...(config[SUB_KEY] || config[SUB_KEY_LEGACY] || {}) };
+      const sub = { ...(config[SUB_KEY] || {}) };
       const isAutoMode = fields.proxyMode.value === "auto";
       config.HOST = fields.host.value.trim();
       config.HOSTS = config.HOST ? [config.HOST] : [];
       config.UUID = fields.uuid.value.trim();
       config.Fingerprint = fields.fingerprint.value;
-      delete config.ECH;
-      delete config.ECHConfig;
       proxy.Mode = isAutoMode ? "proxy-first-fallback-direct" : "proxy-only";
       if (!isAutoMode) {
         proxy.PROXYIP = cleanProxyipText(fields.proxyip.value);
@@ -2001,7 +1979,6 @@
       sub.SUBNAME = fields.subName.value.trim() || DEFAULT_SUB_NAME;
       config[PROXY_KEY] = proxy;
       config[SUB_KEY] = sub;
-      config[SUB_KEY_LEGACY] = sub;
       return config;
     }
 
@@ -2012,7 +1989,7 @@
       url.searchParams.set("token", token);
       url.searchParams.set("v", "2026-06-13-v6");
       if (flag) {
-        url.searchParams.set(flag, "");
+        url.searchParams.set(flag, "1");
       }
       url.hash = fields.subName.value.trim() || DEFAULT_SUB_NAME;
       return url.href;
@@ -2030,39 +2007,10 @@
         <div class="link-row" data-value="${escapeHtml(value)}">
           <strong>${escapeHtml(name)}</strong>
           <button class="secondary" type="button" data-copy="${escapeHtml(name)}" ${value ? "" : "disabled"}>复制</button>
-          <button class="ghost" type="button" data-qr="${escapeHtml(name)}" ${value ? "" : "disabled"}>二维码</button>
         </div>
       `).join("");
       links.querySelectorAll("[data-copy]").forEach((button) => {
         button.addEventListener("click", () => copyText(state.links[button.dataset.copy], button.dataset.copy));
-      });
-      links.querySelectorAll("[data-qr]").forEach((button) => {
-        button.addEventListener("click", () => renderQr(state.links[button.dataset.qr], button.dataset.qr));
-      });
-      if (!state.qrUrl && state.links.Mixed) {
-        renderQr(state.links.Mixed, "Mixed");
-      }
-    }
-
-    function renderQr(value, label) {
-      state.qrUrl = value || "";
-      const canvas = document.getElementById("qrCanvas");
-      const ctx = canvas.getContext("2d");
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      if (!state.qrUrl) {
-        setStatus("没有可生成二维码的订阅链接。", "error");
-        return;
-      }
-      if (!window.QRCode) {
-        setStatus("二维码库未加载，链接仍可复制。", "error");
-        return;
-      }
-      window.QRCode.toCanvas(canvas, state.qrUrl, {
-        width: 320,
-        margin: 1,
-        errorCorrectionLevel: "M"
-      }, (error) => {
-        setStatus(error ? "二维码生成失败。" : label + " 二维码", error ? "error" : "ok");
       });
     }
 
