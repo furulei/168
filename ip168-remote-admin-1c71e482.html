@@ -1607,7 +1607,8 @@
         testing: false,
         cancel: false,
         tested: 0,
-        ok: 0
+        ok: 0,
+        runId: 0
       },
       catalogSummary: null,
       links: {}
@@ -2561,6 +2562,7 @@
     }
 
     function resetAutoRunState(settings) {
+      const runId = Number(state.autoRun?.runId || 0) + 1;
       state.autoRun = {
         candidates: [],
         selected: new Set(),
@@ -2569,7 +2571,8 @@
         testing: false,
         cancel: false,
         tested: 0,
-        ok: 0
+        ok: 0,
+        runId
       };
     }
 
@@ -2585,8 +2588,40 @@
       return Number.isFinite(Number(value)) ? Math.round(Number(value)) + "ms" : "\u53ef\u7528";
     }
 
+    function autoRunLatency(result) {
+      const value = result?.traceMs ?? result?.googleMs ?? result?.connectMs ?? result?.delayMs ?? result?.latencyMs ?? result?.latency;
+      return Number.isFinite(Number(value)) ? Number(value) : Number.POSITIVE_INFINITY;
+    }
+
+    function autoRunCandidateProxies(candidates = state.autoRun.candidates || []) {
+      return candidates.map(endpointOf).filter(Boolean);
+    }
+
+    function autoRunSortedCandidates(candidates) {
+      const originalIndex = new Map(autoRunCandidateProxies(candidates).map((proxy, index) => [proxy, index]));
+      const rank = (result) => {
+        if (result?.ok) return 0;
+        if (result && !result.testing) return 1;
+        if (result?.testing) return 2;
+        return 3;
+      };
+      return [...candidates].sort((left, right) => {
+        const leftProxy = endpointOf(left);
+        const rightProxy = endpointOf(right);
+        const leftResult = autoRunEndpointResult(leftProxy);
+        const rightResult = autoRunEndpointResult(rightProxy);
+        const rankDiff = rank(leftResult) - rank(rightResult);
+        if (rankDiff) return rankDiff;
+        if (leftResult?.ok && rightResult?.ok) {
+          const latencyDiff = autoRunLatency(leftResult) - autoRunLatency(rightResult);
+          if (latencyDiff) return latencyDiff;
+        }
+        return (originalIndex.get(leftProxy) ?? 0) - (originalIndex.get(rightProxy) ?? 0);
+      });
+    }
+
     function updateAutoRunTotals() {
-      const completed = Array.from(state.autoRun.results.values()).filter((item) => item && !item.testing);
+      const completed = autoRunCandidateProxies().map((proxy) => state.autoRun.results.get(proxy)).filter((item) => item && !item.testing);
       state.autoRun.tested = completed.length;
       state.autoRun.ok = completed.filter((item) => item.ok).length;
     }
@@ -2609,7 +2644,7 @@
       const candidates = state.autoRun.candidates || [];
       const selectedCount = state.autoRun.selected.size;
       updateAutoRunTotals();
-      fields.autoRunSubtitle.textContent = autoCountryLabel(settings.country) + " / IPv" + settings.ipVersion + " / " + (settings.port || "全部端口") + " / \u524d " + AUTO_RUN_CANDIDATE_LIMIT + " \u4e2a\u5019\u9009";
+      fields.autoRunSubtitle.textContent = autoCountryLabel(settings.country) + " / IPv" + settings.ipVersion + " / " + (settings.port || "全部端口");
       fields.autoRunProgress.textContent = "\u5019\u9009 " + candidates.length + " \u6761\uff0c\u5df2\u6d4b\u901f " + state.autoRun.tested + " / " + candidates.length + "\uff0c\u53ef\u7528 " + state.autoRun.ok + "\uff0c\u5df2\u9009 " + selectedCount + " / " + AUTO_RUN_IMPORT_LIMIT + "\u3002";
       fields.autoRunImport.disabled = !(selectedCount || state.autoRun.ok);
       fields.autoRunImport.textContent = "\u5bfc\u5165\uff08\u5df2\u9009 " + selectedCount + " / \u6700\u591a " + AUTO_RUN_IMPORT_LIMIT + "\uff09";
@@ -2617,7 +2652,7 @@
         fields.autoRunRows.innerHTML = '<tr><td colspan="5" class="hint">\u5f53\u524d\u56fd\u5bb6\u6ca1\u6709\u53ef\u5bfc\u5165\u7684\u5019\u9009 IP\u3002</td></tr>';
         return;
       }
-      fields.autoRunRows.innerHTML = candidates.map((node) => {
+      fields.autoRunRows.innerHTML = autoRunSortedCandidates(candidates).map((node) => {
         const proxy = endpointOf(node);
         const result = autoRunEndpointResult(proxy);
         const checked = state.autoRun.selected.has(proxy) ? " checked" : "";
@@ -2640,26 +2675,30 @@
     async function openAutoRunDialog() {
       const settings = readAutoSettings();
       resetAutoRunState(settings);
+      const runId = state.autoRun.runId;
       fields.autoRunDialog.hidden = false;
-      fields.autoRunProgress.textContent = "\u6b63\u5728\u8bfb\u53d6\u524d " + AUTO_RUN_CANDIDATE_LIMIT + " \u4e2a\u5019\u9009...";
+      fields.autoRunProgress.textContent = "\u6b63\u5728\u8bfb\u53d6\u5019\u9009...";
       fields.autoRunRows.innerHTML = '<tr><td colspan="5" class="hint">\u5019\u9009\u8bfb\u53d6\u4e2d...</td></tr>';
       setStatus("\u6b63\u5728\u6253\u5f00\u5019\u9009 IP \u6d4b\u901f\u961f\u5217...");
-      state.autoRun.candidates = await loadAutoRunCandidates(settings);
+      const candidates = await loadAutoRunCandidates(settings);
+      if (state.autoRun.runId !== runId || state.autoRun.cancel) return;
+      state.autoRun.candidates = candidates;
       renderAutoRunDialog();
       const targets = state.autoRun.candidates.map(endpointOf).filter(Boolean);
       if (!targets.length) {
         setStatus("\u5f53\u524d\u56fd\u5bb6\u6ca1\u6709\u5019\u9009 IP\u3002", "error");
         return;
       }
-      queueAutoRunSpeedTests(targets).catch(showError);
+      queueAutoRunSpeedTests(targets, runId).catch(showError);
     }
 
-    async function queueAutoRunSpeedTests(targets) {
+    async function queueAutoRunSpeedTests(targets, runId) {
+      if (state.autoRun.runId !== runId || state.autoRun.cancel) return;
       state.autoRun.testing = true;
       state.autoRun.cancel = false;
       renderAutoRunDialog();
       for (let index = 0; index < targets.length; index += AUTO_RUN_TEST_BATCH_SIZE) {
-        if (state.autoRun.cancel) break;
+        if (state.autoRun.runId !== runId || state.autoRun.cancel) return;
         const chunk = targets.slice(index, index + AUTO_RUN_TEST_BATCH_SIZE);
         chunk.forEach((proxy) => state.autoRun.results.set(proxy, { proxy, testing: true, ok: false }));
         renderAutoRunDialog();
@@ -2671,6 +2710,7 @@
             concurrency: AUTO_RUN_TEST_CONCURRENCY
           });
         } catch (error) {
+          if (state.autoRun.runId !== runId || state.autoRun.cancel) return;
           if (isAuthError(error)) {
             state.autoRun.testing = false;
             state.autoRun.cancel = true;
@@ -2686,6 +2726,7 @@
           renderAutoRunDialog();
           continue;
         }
+        if (state.autoRun.runId !== runId || state.autoRun.cancel) return;
         const returned = new Set();
         (data.results || []).forEach((item) => {
           returned.add(item.proxy);
@@ -2698,6 +2739,7 @@
         });
         renderAutoRunDialog();
       }
+      if (state.autoRun.runId !== runId) return;
       state.autoRun.testing = false;
       renderAutoRunDialog();
     }
@@ -2717,7 +2759,7 @@
     }
 
     function selectedAutoRunEndpoints() {
-      return state.autoRun.candidates
+      return autoRunSortedCandidates(state.autoRun.candidates)
         .map(endpointOf)
         .filter((proxy) => proxy && state.autoRun.selected.has(proxy))
         .slice(0, AUTO_RUN_IMPORT_LIMIT);
@@ -2726,7 +2768,7 @@
     function autoRunFillToNine() {
       const selected = selectedAutoRunEndpoints();
       const used = new Set(selected);
-      for (const node of state.autoRun.candidates) {
+      for (const node of autoRunSortedCandidates(state.autoRun.candidates)) {
         if (selected.length >= AUTO_RUN_IMPORT_LIMIT) break;
         const proxy = endpointOf(node);
         const result = autoRunEndpointResult(proxy);
