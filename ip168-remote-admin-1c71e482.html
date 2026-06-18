@@ -1058,12 +1058,12 @@
     .entry-picker-panel {
       position: relative;
       z-index: 1;
-      width: min(780px, calc(100vw - 32px));
-      max-height: min(720px, calc(100vh - 48px));
+      width: min(520px, calc(100vw - 32px));
+      max-height: min(480px, calc(100vh - 48px));
       display: grid;
-      grid-template-rows: auto auto minmax(0, 1fr) auto;
-      gap: 12px;
-      padding: 18px;
+      grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+      gap: 10px;
+      padding: 14px;
       border: 1px solid var(--line);
       border-radius: 4px;
       background:
@@ -1072,11 +1072,31 @@
       box-shadow: 0 24px 70px rgba(0, 0, 0, 0.38);
     }
     .entry-picker-table-wrap {
-      min-height: 260px;
+      min-height: 170px;
       overflow: auto;
       border: 1px solid var(--line);
       border-radius: 4px;
       background: rgba(255, 255, 255, 0.025);
+    }
+    .entry-picker-countries {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 8px;
+    }
+    .entry-picker-country {
+      width: 100%;
+      min-width: 0;
+      min-height: 44px;
+      height: 44px;
+      padding: 0 8px;
+      font-size: 14px;
+      white-space: nowrap;
+    }
+    .entry-picker-country.active {
+      border-color: var(--line-strong);
+      background: var(--control-bg-active);
+      color: #fff;
+      font-weight: 760;
     }
     .entry-picker-table {
       width: 100%;
@@ -1086,7 +1106,7 @@
     }
     .entry-picker-table th,
     .entry-picker-table td {
-      padding: 10px 12px;
+      padding: 8px 10px;
       border-bottom: 1px solid rgba(255, 255, 255, 0.18);
       text-align: left;
       vertical-align: middle;
@@ -1122,7 +1142,7 @@
     }
     .entry-picker-actions button {
       width: 100%;
-      min-height: 52px;
+      min-height: 48px;
     }
     .direct-open {
       max-width: 760px;
@@ -1537,8 +1557,8 @@
           <h2 id="entryPickerTitle">选择入口</h2>
           <div id="entryPickerSubtitle" class="auto-run-subtitle"></div>
         </div>
-        <button id="entryPickerClose" class="ghost" type="button">关闭</button>
       </div>
+      <div id="entryPickerCountries" class="entry-picker-countries"></div>
       <div id="entryPickerProgress" class="auto-run-progress" role="status" aria-live="polite"></div>
       <div class="entry-picker-table-wrap">
         <table class="entry-picker-table">
@@ -1546,7 +1566,7 @@
             <tr>
               <th>选择</th>
               <th>入口</th>
-              <th>名称</th>
+              <th>国家</th>
             </tr>
           </thead>
           <tbody id="entryPickerRows">
@@ -1576,6 +1596,15 @@
     const AUTO_RUN_TEST_BATCH_SIZE = 20;
     const AUTO_RUN_TEST_CONCURRENCY = 4;
     const AUTO_RUN_TEST_TIMEOUT_MS = 1000;
+    const ENTRY_PICKER_SEED_URL = "https://raw.githubusercontent.com/furulei/168/main/seed.json";
+    const ENTRY_PICKER_SAMPLE_SIZE = 30;
+    const ENTRY_PICKER_COUNTRIES = Object.freeze([
+      { code: "SG", name: "新加坡" },
+      { code: "US", name: "美国" },
+      { code: "JP", name: "日本" },
+      { code: "DE", name: "德国" },
+      { code: "NL", name: "荷兰" }
+    ]);
 
     if (!injected) {
       document.body.classList.add("missing-entry");
@@ -1622,8 +1651,11 @@
       entryPicker: {
         rows: [],
         selected: new Set(),
+        selectedRows: new Map(),
         dragging: false,
-        dragMode: true
+        dragMode: true,
+        country: "SG",
+        seed: null
       },
       catalogSummary: null,
       links: {},
@@ -1669,11 +1701,11 @@
       autoRunClose: document.getElementById("autoRunClose"),
       entryPickerDialog: document.getElementById("entryPickerDialog"),
       entryPickerSubtitle: document.getElementById("entryPickerSubtitle"),
+      entryPickerCountries: document.getElementById("entryPickerCountries"),
       entryPickerProgress: document.getElementById("entryPickerProgress"),
       entryPickerRows: document.getElementById("entryPickerRows"),
       entryPickerSave: document.getElementById("entryPickerSave"),
-      entryPickerCancel: document.getElementById("entryPickerCancel"),
-      entryPickerClose: document.getElementById("entryPickerClose")
+      entryPickerCancel: document.getElementById("entryPickerCancel")
     };
 
     const AUTO_COUNTRY_LABELS = {
@@ -2163,31 +2195,87 @@
       showSaveNotice("入口已保存");
     }
 
-    function entryPickerSourceRows() {
-      return String(fields.addText.value || "")
-        .split(/\r?\n/)
-        .map((line, index) => {
-          const text = line.trim();
-          if (!text || text.startsWith("#")) return null;
-          const marker = text.lastIndexOf("#");
-          const endpoint = marker === -1 ? text : text.slice(0, marker).trim();
-          const label = marker === -1 ? "" : text.slice(marker + 1).trim();
-          if (!endpoint) return null;
-          return {
-            id: String(index),
-            line: text,
-            endpoint,
-            label: label || "-"
-          };
-        })
-        .filter(Boolean);
+    function entryPickerCountryInfo(countryCode) {
+      const code = String(countryCode || "").toUpperCase();
+      return ENTRY_PICKER_COUNTRIES.find((item) => item.code === code) || ENTRY_PICKER_COUNTRIES[0];
+    }
+
+    function entryPickerCountryName(countryCode) {
+      return entryPickerCountryInfo(countryCode).name;
+    }
+
+    function normalizeEntryPickerSeedLine(rawValue, countryCode) {
+      const text = String(rawValue || "").trim();
+      if (!text || text.startsWith("#")) return null;
+      const marker = text.lastIndexOf("#");
+      const endpoint = marker === -1 ? text : text.slice(0, marker).trim();
+      if (!endpoint) return null;
+      const code = entryPickerCountryInfo(countryCode).code;
+      const countryName = entryPickerCountryName(code);
+      return {
+        id: code + ":" + endpoint.toLowerCase(),
+        line: endpoint + "#" + countryName,
+        endpoint,
+        label: countryName
+      };
+    }
+
+    function entryPickerSeedRows(seed, countryCode) {
+      const code = entryPickerCountryInfo(countryCode).code;
+      const countries = seed?.countries && typeof seed.countries === "object" ? seed.countries : {};
+      const source = countries[code];
+      const rawEntries = Array.isArray(source) ? source : Array.isArray(source?.entries) ? source.entries : [];
+      const rows = [];
+      const seen = new Set();
+      for (const rawEntry of rawEntries) {
+        const row = normalizeEntryPickerSeedLine(rawEntry, code);
+        if (!row || seen.has(row.id)) continue;
+        seen.add(row.id);
+        rows.push(row);
+      }
+      return rows;
+    }
+
+    function entryPickerRandomIndex(length) {
+      const size = Math.max(0, Number(length) || 0);
+      if (!size) return 0;
+      if (window.crypto?.getRandomValues) {
+        const buffer = new Uint32Array(1);
+        window.crypto.getRandomValues(buffer);
+        return buffer[0] % size;
+      }
+      return Math.floor(Math.random() * size);
+    }
+
+    function sampleEntryPickerRows(rows) {
+      const pool = Array.isArray(rows) ? [...rows] : [];
+      const selected = [];
+      const limit = Math.min(ENTRY_PICKER_SAMPLE_SIZE, pool.length);
+      while (selected.length < limit) {
+        selected.push(pool.splice(entryPickerRandomIndex(pool.length), 1)[0]);
+      }
+      return selected;
+    }
+
+    async function loadEntryPickerSeed() {
+      if (state.entryPicker.seed) return state.entryPicker.seed;
+      const seed = await catalogJson(ENTRY_PICKER_SEED_URL);
+      state.entryPicker.seed = seed;
+      return seed;
+    }
+
+    function renderEntryPickerCountries() {
+      fields.entryPickerCountries.innerHTML = ENTRY_PICKER_COUNTRIES.map((item) => {
+        const active = item.code === state.entryPicker.country ? " active" : "";
+        return `<button class="entry-picker-country${active}" type="button" data-entry-picker-country="${escapeHtml(item.code)}">${escapeHtml(item.name)}</button>`;
+      }).join("");
     }
 
     function updateEntryPickerProgress() {
       const total = state.entryPicker.rows.length;
-      const selected = state.entryPicker.selected.size;
-      fields.entryPickerSubtitle.textContent = total ? "入口 " + total + " 条" : "暂无入口";
-      fields.entryPickerProgress.textContent = total ? "已选择 " + selected + " / " + total + "。" : "当前入口列表为空。";
+      const selected = state.entryPicker.selectedRows.size;
+      fields.entryPickerSubtitle.textContent = entryPickerCountryName(state.entryPicker.country);
+      fields.entryPickerProgress.textContent = total ? "当前显示 " + total + " 条，已选择 " + selected + " 条。" : "当前国家暂无入口。";
       fields.entryPickerSave.disabled = selected < 1;
     }
 
@@ -2195,10 +2283,15 @@
       if (!rowElement) return;
       const id = String(rowElement.dataset.entryPickerIndex || "");
       if (!id) return;
+      const row = state.entryPicker.rows.find((item) => item.id === id);
       if (selected) {
         state.entryPicker.selected.add(id);
+        if (row) {
+          state.entryPicker.selectedRows.set(id, row);
+        }
       } else {
         state.entryPicker.selected.delete(id);
+        state.entryPicker.selectedRows.delete(id);
       }
       rowElement.classList.toggle("selected", selected);
       const mark = rowElement.querySelector("[data-entry-picker-mark]");
@@ -2211,13 +2304,13 @@
     function renderEntryPickerRows() {
       const rows = state.entryPicker.rows;
       if (!rows.length) {
-        fields.entryPickerRows.innerHTML = '<tr><td colspan="3" class="hint">暂无入口。</td></tr>';
+        fields.entryPickerRows.innerHTML = '<tr><td colspan="3" class="hint">当前国家暂无入口。</td></tr>';
         updateEntryPickerProgress();
         return;
       }
       fields.entryPickerRows.innerHTML = rows.map((row) => `
-        <tr data-entry-picker-index="${escapeHtml(row.id)}">
-          <td data-entry-picker-mark></td>
+        <tr data-entry-picker-index="${escapeHtml(row.id)}" class="${state.entryPicker.selected.has(row.id) ? "selected" : ""}">
+          <td data-entry-picker-mark>${state.entryPicker.selected.has(row.id) ? "✓" : ""}</td>
           <td class="mono">${escapeHtml(row.endpoint)}</td>
           <td>${escapeHtml(row.label)}</td>
         </tr>
@@ -2225,13 +2318,40 @@
       updateEntryPickerProgress();
     }
 
-    function openEntryPickerDialog() {
-      state.entryPicker.rows = entryPickerSourceRows();
+    function renderEntryPickerCountry(countryCode) {
+      state.entryPicker.country = entryPickerCountryInfo(countryCode).code;
+      renderEntryPickerCountries();
+      const seed = state.entryPicker.seed;
+      state.entryPicker.rows = sampleEntryPickerRows(entryPickerSeedRows(seed, state.entryPicker.country));
+      renderEntryPickerRows();
+    }
+
+    async function openEntryPickerDialog() {
+      state.entryPicker.country = ENTRY_PICKER_COUNTRIES[0].code;
+      state.entryPicker.rows = [];
       state.entryPicker.selected = new Set();
+      state.entryPicker.selectedRows = new Map();
       state.entryPicker.dragging = false;
       state.entryPicker.dragMode = true;
-      renderEntryPickerRows();
       fields.entryPickerDialog.hidden = false;
+      renderEntryPickerCountries();
+      fields.entryPickerSubtitle.textContent = entryPickerCountryName(state.entryPicker.country);
+      fields.entryPickerProgress.textContent = "正在读取入口池...";
+      fields.entryPickerRows.innerHTML = '<tr><td colspan="3" class="hint">入口池读取中...</td></tr>';
+      try {
+        await loadEntryPickerSeed();
+        renderEntryPickerCountry(state.entryPicker.country);
+      } catch (error) {
+        state.entryPicker.rows = [];
+        fields.entryPickerProgress.textContent = error.message || String(error);
+        fields.entryPickerRows.innerHTML = '<tr><td colspan="3" class="hint">入口池读取失败。</td></tr>';
+        fields.entryPickerSave.disabled = true;
+      }
+    }
+
+    function selectEntryPickerCountry(countryCode) {
+      if (!state.entryPicker.seed) return;
+      renderEntryPickerCountry(countryCode);
     }
 
     function closeEntryPickerDialog() {
@@ -2267,7 +2387,7 @@
     }
 
     async function saveEntryPickerSelection() {
-      const selectedRows = state.entryPicker.rows.filter((row) => state.entryPicker.selected.has(row.id));
+      const selectedRows = Array.from(state.entryPicker.selectedRows.values());
       if (!selectedRows.length) {
         updateEntryPickerProgress();
         return;
@@ -2975,9 +3095,13 @@
       fields.entryPickerRows.addEventListener("mousedown", beginEntryPickerDrag);
       fields.entryPickerRows.addEventListener("mouseover", moveEntryPickerDrag);
       document.addEventListener("mouseup", endEntryPickerDrag);
+      fields.entryPickerCountries.addEventListener("click", (event) => {
+        const button = event.target.closest("[data-entry-picker-country]");
+        if (!button) return;
+        selectEntryPickerCountry(button.dataset.entryPickerCountry || "");
+      });
       fields.entryPickerSave.addEventListener("click", () => saveEntryPickerSelection().catch(showError));
       fields.entryPickerCancel.addEventListener("click", closeEntryPickerDialog);
-      fields.entryPickerClose.addEventListener("click", closeEntryPickerDialog);
       fields.entryPickerDialog.addEventListener("click", (event) => {
         if (event.target?.dataset?.entryPickerClose !== undefined) {
           closeEntryPickerDialog();
