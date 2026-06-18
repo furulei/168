@@ -1080,7 +1080,8 @@
     }
     .entry-picker-table-wrap {
       min-height: 170px;
-      overflow: auto;
+      overflow-x: hidden;
+      overflow-y: auto;
       border: 1px solid var(--line);
       border-radius: 4px;
       background: rgba(255, 255, 255, 0.025);
@@ -1088,7 +1089,7 @@
     .entry-picker-countries {
       display: grid;
       grid-template-columns: repeat(5, minmax(0, 1fr));
-      gap: 8px;
+      gap: 6px;
       flex: 1;
       min-width: 0;
     }
@@ -1097,7 +1098,7 @@
       min-width: 0;
       min-height: 42px;
       height: 42px;
-      padding: 0 8px;
+      padding: 0 6px;
       font-size: 14px;
       white-space: nowrap;
     }
@@ -1109,17 +1110,26 @@
     }
     .entry-picker-table {
       width: 100%;
+      max-width: 100%;
       border-collapse: collapse;
       font-size: 14px;
       table-layout: fixed;
       user-select: none;
     }
+    .entry-picker-col-select {
+      width: 52px;
+    }
+    .entry-picker-col-country {
+      width: 88px;
+    }
     .entry-picker-table th,
     .entry-picker-table td {
-      padding: 8px 10px;
+      box-sizing: border-box;
+      padding: 8px 8px;
       border-bottom: 1px solid rgba(255, 255, 255, 0.18);
       text-align: center;
       vertical-align: middle;
+      line-height: 1.25;
     }
     .entry-picker-table th {
       position: sticky;
@@ -1142,17 +1152,15 @@
     }
     .entry-picker-table td:first-child,
     .entry-picker-table th:first-child {
-      width: 58px;
       text-align: center;
     }
     .entry-picker-table td:nth-child(3),
     .entry-picker-table th:nth-child(3) {
-      width: 82px;
       text-align: center;
     }
     .entry-picker-table td:nth-child(2) {
       overflow: hidden;
-      text-overflow: ellipsis;
+      text-overflow: clip;
       white-space: nowrap;
     }
     .entry-picker-tools {
@@ -1596,6 +1604,11 @@
       </div>
       <div class="entry-picker-table-wrap">
         <table class="entry-picker-table">
+          <colgroup>
+            <col class="entry-picker-col-select">
+            <col>
+            <col class="entry-picker-col-country">
+          </colgroup>
           <thead>
             <tr>
               <th>选择</th>
