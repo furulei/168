@@ -25,7 +25,7 @@ This repository must not contain deployment-specific Cloudflare account IDs, KV 
 
 ## Optional Settings
 
-- `SUB_CONVERTER_URL`: Clash/Sing-box converter service URL. If omitted, normal and base64 subscriptions still work, but converted subscriptions return a clear configuration error.
+- `SUB_CONVERTER_URL`: Clash/Sing-box converter service URL. If omitted, Clash and Sing-box use the bundled default converter `https://sub.ip168.dpdns.org`.
 - `PROXYIP_CATALOG_SUMMARY_URL`: optional proxy catalog summary JSON URL.
 - `PROXYIP_CATALOG_IPV4_URL`: optional IPv4 proxy catalog JSON URL.
 - `PROXYIP_CATALOG_IPV6_URL`: optional IPv6 proxy catalog JSON URL.

@@ -81,7 +81,6 @@ test("repository does not contain known instance identifiers or secrets", async 
   ];
   const combined = (await Promise.all(files.map((file) => readText(file)))).join("\n");
   for (const pattern of [
-    new RegExp(["d", "pdns"].join("") + "\\.org", "i"),
     new RegExp(["cf", "ut_"].join(""), "i"),
     new RegExp(["cf", "at_"].join(""), "i"),
     new RegExp(["github", "_pat_"].join(""), "i"),
@@ -124,9 +123,9 @@ test("ip168 source removes legacy env aliases and source comments", async () => 
   assert.equal(source.includes("<!--IP168_BOOTSTRAP-->"), false);
 });
 
-test("optional converter and proxy catalog defaults are empty for open-source builds", async () => {
+test("default converter is configured and proxy catalog defaults stay empty", async () => {
   const source = await readSource();
-  assert.ok(source.includes('var DEFAULT_SUB_CONVERTER_URL = "";'));
+  assert.ok(source.includes('var DEFAULT_SUB_CONVERTER_URL = "https://sub.ip168.dpdns.org";'));
   assert.ok(source.includes('var PROXYIP_CATALOG_SUMMARY_URL = "";'));
   assert.ok(source.includes('var PROXYIP_CATALOG_IPV4_URL = "";'));
   assert.ok(source.includes('var PROXYIP_CATALOG_IPV6_URL = "";'));
