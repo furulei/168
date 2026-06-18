@@ -1703,7 +1703,7 @@
               <input id="failureThreshold" type="number" min="1" max="10">
             </label>
             <label>测速超时(ms)
-              <input id="autoTimeoutMs" type="number" min="1000" max="8000">
+              <input id="autoTimeoutMs" type="number" min="1000" max="1500">
             </label>
             <label>并发
               <input id="autoConcurrency" type="number" min="1" max="8">
@@ -1817,7 +1817,8 @@
     const AUTO_RUN_IMPORT_LIMIT = 9;
     const AUTO_RUN_TEST_BATCH_SIZE = 20;
     const AUTO_RUN_TEST_CONCURRENCY = 4;
-    const AUTO_RUN_TEST_TIMEOUT_MS = 2500;
+    const AUTO_RUN_TEST_TIMEOUT_MIN_MS = 1000;
+    const AUTO_RUN_TEST_TIMEOUT_MAX_MS = 1500;
     const ENTRY_PICKER_SEED_URL = "https://raw.githubusercontent.com/furulei/168/main/seed.json";
     const ENTRY_PICKER_SAMPLE_SIZE = 30;
     const ENTRY_CANDIDATE_LINES = Object.freeze([
@@ -2201,6 +2202,10 @@
       const value = Number(input.value);
       if (!Number.isFinite(value)) return fallback;
       return Math.max(min, Math.min(max, Math.round(value)));
+    }
+
+    function randomAutoRunTestTimeoutMs() {
+      return Math.floor(AUTO_RUN_TEST_TIMEOUT_MIN_MS + Math.random() * (AUTO_RUN_TEST_TIMEOUT_MAX_MS - AUTO_RUN_TEST_TIMEOUT_MIN_MS + 1));
     }
 
     async function readJson(response) {
@@ -3304,7 +3309,7 @@
         try {
           const data = await postJson(bootstrap.endpoints.proxyTest, {
             targets: chunk,
-            timeoutMs: AUTO_RUN_TEST_TIMEOUT_MS,
+            timeoutMs: randomAutoRunTestTimeoutMs(),
             concurrency: AUTO_RUN_TEST_CONCURRENCY
           }, controller.signal);
           if (state.autoRun.runId !== runId || state.autoRun.cancel) return;
@@ -3451,7 +3456,7 @@
       fields.autoCandidateLimit.value = settings.candidateLimit ?? 50;
       fields.autoSaveCount.value = settings.saveCount ?? 3;
       fields.failureThreshold.value = settings.failureThreshold ?? 3;
-      fields.autoTimeoutMs.value = settings.timeoutMs ?? 2500;
+      fields.autoTimeoutMs.value = settings.timeoutMs ?? AUTO_RUN_TEST_TIMEOUT_MAX_MS;
       fields.autoConcurrency.value = settings.concurrency ?? 4;
       fields.autoHealCooldownMinutes.value = settings.autoHealCooldownMinutes ?? 10;
       fields.standbyGroupCount.value = settings.standbyGroupCount ?? 2;
@@ -3474,7 +3479,7 @@
         candidateLimit: normalizedNumber(fields.autoCandidateLimit, 50, 1, 50),
         saveCount: normalizedNumber(fields.autoSaveCount, 3, 1, 10),
         failureThreshold: normalizedNumber(fields.failureThreshold, 3, 1, 10),
-        timeoutMs: normalizedNumber(fields.autoTimeoutMs, 2500, 1000, 8000),
+        timeoutMs: normalizedNumber(fields.autoTimeoutMs, AUTO_RUN_TEST_TIMEOUT_MAX_MS, AUTO_RUN_TEST_TIMEOUT_MIN_MS, AUTO_RUN_TEST_TIMEOUT_MAX_MS),
         concurrency: normalizedNumber(fields.autoConcurrency, 4, 1, 8),
         autoHealCooldownMinutes: normalizedNumber(fields.autoHealCooldownMinutes, 10, 1, 120),
         standbyGroupCount: normalizedNumber(fields.standbyGroupCount, 2, 1, 5),

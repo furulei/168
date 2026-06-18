@@ -153,15 +153,19 @@ test("proxy probe route is not shadowed by proxy catalog route", async () => {
 test("proxy probe endpoint accepts the UI timeout range", async () => {
   const source = await readSource();
   assert.equal(source.includes("const timeoutMs = clampNumber(body.timeoutMs, 3000, 1e3, 3e3);"), false);
-  assert.ok(source.includes("const timeoutMs = clampNumber(body.timeoutMs, 3000, 1e3, 8e3);"));
+  assert.ok(source.includes("const timeoutMs = clampNumber(body.timeoutMs, randomProxyProbeTimeoutMs(), 1e3, 1500);"));
 });
 
 test("proxy probe matches desktop trace target and skips google requests", async () => {
   const source = await readSource();
   const adminHtml = await readText("ip168-remote-admin-1c71e482.html");
   assert.ok(source.includes('var PROXYIP_TRACE_HOST = "speed.cloudflare.com";'));
-  assert.ok(source.includes("timeoutMs: 2500,"));
-  assert.ok(adminHtml.includes("const AUTO_RUN_TEST_TIMEOUT_MS = 2500;"));
+  assert.ok(source.includes("timeoutMs: 1500,"));
+  assert.ok(source.includes("randomProxyProbeTimeoutMs(settings.timeoutMs)"));
+  assert.ok(source.includes("const timeoutMs = clampNumber(body.timeoutMs, randomProxyProbeTimeoutMs(), 1e3, 1500);"));
+  assert.ok(adminHtml.includes("const AUTO_RUN_TEST_TIMEOUT_MIN_MS = 1000;"));
+  assert.ok(adminHtml.includes("const AUTO_RUN_TEST_TIMEOUT_MAX_MS = 1500;"));
+  assert.ok(adminHtml.includes("timeoutMs: randomAutoRunTestTimeoutMs(),"));
   assert.equal(adminHtml.includes("googleAfterTrace: true"), false);
   assert.equal(source.includes("const google = await googleProxyEndpointCheck(endpoint, timeoutMs);"), false);
 });

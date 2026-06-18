@@ -780,7 +780,7 @@ var DEFAULT_PROXY_AUTO_SETTINGS = Object.freeze({
   status: "verified,usable",
   candidateLimit: 20,
   saveCount: 3,
-  timeoutMs: 2500,
+  timeoutMs: 1500,
   concurrency: 4,
   keepCurrentIfHealthy: true,
   failureThreshold: 3,
@@ -1547,7 +1547,7 @@ function normalizeProxyAutoSettings(rawSettings) {
     status: normalizeProxyAutoStatus(input.status),
     candidateLimit: clampNumber(input.candidateLimit, DEFAULT_PROXY_AUTO_SETTINGS.candidateLimit, 1, 20),
     saveCount: clampNumber(input.saveCount, DEFAULT_PROXY_AUTO_SETTINGS.saveCount, 1, 10),
-    timeoutMs: clampNumber(input.timeoutMs, DEFAULT_PROXY_AUTO_SETTINGS.timeoutMs, 1e3, 3e3),
+    timeoutMs: clampNumber(input.timeoutMs, DEFAULT_PROXY_AUTO_SETTINGS.timeoutMs, 1e3, 1500),
     concurrency: clampNumber(input.concurrency, DEFAULT_PROXY_AUTO_SETTINGS.concurrency, 1, 4),
     keepCurrentIfHealthy: input.keepCurrentIfHealthy !== false,
     failureThreshold: clampNumber(input.failureThreshold, DEFAULT_PROXY_AUTO_SETTINGS.failureThreshold, 1, 10),
@@ -1804,7 +1804,7 @@ async function refreshProxyStandbyPool(env, settings, hostname, excludedProxyip 
   const candidateResults = await runLimited(
     candidateEndpoints,
     settings.concurrency,
-    (endpoint) => probeProxyEndpoint(endpoint, hostname, settings.timeoutMs)
+    (endpoint) => probeProxyEndpoint(endpoint, hostname, randomProxyProbeTimeoutMs(settings.timeoutMs))
   );
   const slimCandidateResults = candidateResults.map(slimProbeResult);
   const needed = settings.standbyGroupCount * settings.standbyGroupSize;
@@ -1993,7 +1993,7 @@ async function runProxyAutoMaintenance(env, options = {}) {
     const currentResults = await runLimited(
       currentEndpoints,
       settings.concurrency,
-      (endpoint) => probeProxyEndpoint(endpoint, hostname, settings.timeoutMs)
+      (endpoint) => probeProxyEndpoint(endpoint, hostname, randomProxyProbeTimeoutMs(settings.timeoutMs))
     );
     const slimCurrentResults = currentResults.map(slimProbeResult);
     const usableCurrent = slimCurrentResults.filter((result) => isProxyAutoResultUsable(result, settings));
@@ -2053,7 +2053,7 @@ async function runProxyAutoMaintenance(env, options = {}) {
   const candidateResults = await runLimited(
     candidateEndpoints,
     settings.concurrency,
-    (endpoint) => probeProxyEndpoint(endpoint, hostname, settings.timeoutMs)
+    (endpoint) => probeProxyEndpoint(endpoint, hostname, randomProxyProbeTimeoutMs(settings.timeoutMs))
   );
   const slimCandidateResults = candidateResults.map(slimProbeResult);
   const selectedProxyip = selectProxyAutoResults(slimCandidateResults, settings, settings.saveCount);
@@ -2828,6 +2828,11 @@ function clampNumber(value, fallback, min, max) {
   return Math.min(max, Math.max(min, Math.round(number)));
 }
 __name(clampNumber, "clampNumber");
+function randomProxyProbeTimeoutMs(maxMs = DEFAULT_PROXY_AUTO_SETTINGS.timeoutMs) {
+  const max = clampNumber(maxMs, DEFAULT_PROXY_AUTO_SETTINGS.timeoutMs, 1e3, 1500);
+  return Math.floor(1e3 + Math.random() * (max - 1e3 + 1));
+}
+__name(randomProxyProbeTimeoutMs, "randomProxyProbeTimeoutMs");
 function parseProbeTargets(rawTargets, maxTargets = 50) {
   const source = Array.isArray(rawTargets) ? rawTargets : [rawTargets];
   const values = source.flatMap((item) => String(item || "").split(/[\r\n\t,;]+/)).map((item) => item.trim()).filter(Boolean);
@@ -3785,7 +3790,7 @@ async function handleProxyIpProbe(request, env, url) {
   } catch (error) {
     return jsonResponse({ success: false, error: "invalid JSON" }, { status: 400 });
   }
-  const timeoutMs = clampNumber(body.timeoutMs, 3000, 1e3, 8e3);
+  const timeoutMs = clampNumber(body.timeoutMs, randomProxyProbeTimeoutMs(), 1e3, 1500);
   const concurrency = clampNumber(body.concurrency, 4, 1, 8);
   const { endpoints, invalid } = parseProbeTargets(body.targets, 50);
   if (!endpoints.length && !invalid.length) {
