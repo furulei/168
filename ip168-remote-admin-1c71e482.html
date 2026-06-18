@@ -544,6 +544,10 @@
       height: 16px;
       margin: 0;
       accent-color: rgba(255, 255, 255, 0.86);
+      box-shadow: none;
+      transform: none;
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
     }
     input,
     select,
@@ -615,6 +619,12 @@
       box-shadow:
         inset 0 0 0 1px rgba(255, 255, 255, 0.16),
         0 18px 42px rgba(0, 0, 0, 0.18);
+    }
+    input[type="checkbox"]:hover,
+    input[type="checkbox"]:focus {
+      transform: none;
+      box-shadow: none;
+      background: transparent;
     }
     input:focus,
     select:focus,
@@ -868,7 +878,8 @@
     }
     .auto-visible-settings :is(select, button) {
       width: 100%;
-      min-height: 58px;
+      height: 48px;
+      min-height: 48px;
       justify-self: stretch;
     }
     .auto-actions {
@@ -878,7 +889,9 @@
       display: grid;
       align-content: start;
       gap: 14px;
+      width: min(780px, 100%);
       min-height: 0;
+      margin: 0 auto 14px;
     }
     .preference-head {
       display: flex;
@@ -893,22 +906,25 @@
       font-size: 22px;
     }
     .preference-actions {
-      width: min(380px, 100%);
+      width: min(300px, 100%);
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 10px;
+      gap: 8px;
     }
     .preference-actions button {
-      min-height: 52px;
+      height: 44px;
+      min-height: 44px;
+      font-size: 14px;
     }
     .preference-line-buttons {
       display: grid;
       grid-template-columns: repeat(5, minmax(0, 1fr));
-      gap: 10px;
+      gap: 8px;
     }
     .preference-line-button {
       min-width: 0;
-      min-height: 52px;
+      height: 44px;
+      min-height: 44px;
       padding: 0 10px;
       white-space: nowrap;
       border-color: var(--line);
@@ -936,31 +952,17 @@
     .entry-candidate-tool-buttons {
       display: grid;
       grid-template-columns: repeat(2, minmax(96px, 1fr));
-      gap: 10px;
-      width: min(260px, 100%);
+      gap: 8px;
+      width: min(224px, 100%);
     }
     .entry-candidate-tool-buttons button {
+      height: 42px;
       min-height: 42px;
+      font-size: 14px;
     }
     .entry-candidate-table-wrap {
-      min-height: 340px;
-    }
-    .entry-candidate-table th:nth-child(1),
-    .entry-candidate-table td:nth-child(1) {
-      width: 58px;
-      text-align: center;
-    }
-    .entry-candidate-table th:nth-child(2),
-    .entry-candidate-table td:nth-child(2) {
-      width: 38%;
-    }
-    .entry-candidate-table th:nth-child(3),
-    .entry-candidate-table td:nth-child(3),
-    .entry-candidate-table th:nth-child(4),
-    .entry-candidate-table td:nth-child(4),
-    .entry-candidate-table th:nth-child(5),
-    .entry-candidate-table td:nth-child(5) {
-      width: 16%;
+      min-height: 300px;
+      max-height: 420px;
     }
     .auto-hidden-settings[hidden] {
       display: none;
@@ -1005,9 +1007,11 @@
     }
     .auto-region-button,
     .auto-ip-tab {
-      min-height: 52px;
+      height: 44px;
+      min-height: 44px;
       padding: 0 10px;
       white-space: nowrap;
+      font-size: 14px;
     }
     .auto-region-button.active,
     .auto-ip-tab.active,
@@ -1025,7 +1029,8 @@
       padding: 2px 2px 0 0;
     }
     .auto-country-button {
-      min-height: 48px;
+      height: 42px;
+      min-height: 42px;
       padding: 6px 8px;
       line-height: 1.2;
       font-size: 14px;
@@ -1059,12 +1064,12 @@
     .auto-run-panel {
       position: relative;
       z-index: 1;
-      width: min(920px, calc(100vw - 32px));
-      max-height: min(760px, calc(100vh - 48px));
+      width: min(780px, calc(100vw - 32px));
+      max-height: min(640px, calc(100vh - 48px));
       display: grid;
       grid-template-rows: auto auto minmax(0, 1fr) auto;
-      gap: 12px;
-      padding: 18px;
+      gap: 10px;
+      padding: 14px;
       border: 1px solid var(--line);
       border-radius: 4px;
       background:
@@ -1075,12 +1080,19 @@
     .auto-run-head {
       display: flex;
       justify-content: space-between;
-      align-items: start;
+      align-items: center;
       gap: 12px;
     }
     .auto-run-head h2 {
       margin-bottom: 6px;
-      font-size: 20px;
+      font-size: 18px;
+    }
+    .auto-run-head > button {
+      width: 160px;
+      min-width: 120px;
+      height: 44px;
+      min-height: 44px;
+      font-size: 14px;
     }
     .auto-run-subtitle,
     .auto-run-progress {
@@ -1092,25 +1104,24 @@
       min-height: 22px;
     }
     .auto-run-table-wrap {
-      min-height: 260px;
+      min-height: 240px;
       overflow: auto;
       border: 1px solid var(--line);
       border-radius: 4px;
       background: rgba(255, 255, 255, 0.025);
     }
-    .auto-run-table {
+    .selection-list {
       width: 100%;
-      border-collapse: collapse;
       font-size: 14px;
+      user-select: none;
     }
-    .auto-run-table th,
-    .auto-run-table td {
-      padding: 10px 12px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.18);
-      text-align: left;
-      vertical-align: middle;
+    .selection-header,
+    .selection-row {
+      display: grid;
+      width: 100%;
+      box-sizing: border-box;
     }
-    .auto-run-table th {
+    .selection-header {
       position: sticky;
       top: 0;
       z-index: 1;
@@ -1118,15 +1129,44 @@
       color: rgba(255, 255, 255, 0.82);
       font-weight: 760;
     }
-    .auto-run-table td:first-child,
-    .auto-run-table th:first-child {
-      width: 64px;
+    .selection-row {
+      min-height: 48px;
+      cursor: pointer;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.18);
+    }
+    .selection-row:hover {
+      background: rgba(255, 255, 255, 0.06);
+    }
+    .selection-row.selected {
+      background: rgba(255, 255, 255, 0.18);
+      color: #fff;
+      font-weight: 700;
+    }
+    .selection-cell {
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      box-sizing: border-box;
+      padding: 8px 10px;
+      line-height: 1.25;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+    .selection-mark {
+      justify-content: center;
+      font-size: 17px;
+    }
+    .selection-empty {
+      padding: 16px 12px;
+      color: var(--muted);
       text-align: center;
     }
-    .auto-run-table input[type="checkbox"] {
-      width: 18px;
-      height: 18px;
-      accent-color: #fff;
+    .auto-run-grid {
+      grid-template-columns: 52px minmax(170px, 1.35fr) minmax(72px, 0.45fr) minmax(148px, 1fr) minmax(82px, 0.45fr);
+    }
+    .entry-candidate-grid {
+      grid-template-columns: 52px minmax(176px, 1.55fr) minmax(74px, 0.5fr) minmax(72px, 0.45fr) minmax(86px, 0.55fr);
     }
     .auto-run-row-ok {
       color: #fff;
@@ -1136,12 +1176,15 @@
     }
     .auto-run-actions {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-      gap: 12px;
+      grid-template-columns: repeat(2, 160px);
+      justify-content: end;
+      gap: 10px;
     }
     .auto-run-actions button {
       width: 100%;
-      min-height: 52px;
+      height: 44px;
+      min-height: 44px;
+      font-size: 14px;
     }
     .entry-picker-panel {
       position: relative;
@@ -1588,20 +1631,18 @@
           </div>
         </div>
         <div class="auto-run-table-wrap entry-candidate-table-wrap">
-          <table class="auto-run-table entry-candidate-table">
-            <thead>
-              <tr>
-                <th>选</th>
-                <th>入口</th>
-                <th>线路</th>
-                <th>延迟</th>
-                <th>速度</th>
-              </tr>
-            </thead>
-            <tbody id="entryCandidateRows">
-              <tr><td colspan="5" class="hint">请先拉取 IP。</td></tr>
-            </tbody>
-          </table>
+          <div class="selection-list" role="table" aria-label="三网入口 IP">
+            <div class="selection-header entry-candidate-grid" role="row">
+              <div class="selection-cell selection-mark" role="columnheader">选</div>
+              <div class="selection-cell" role="columnheader">入口</div>
+              <div class="selection-cell" role="columnheader">线路</div>
+              <div class="selection-cell" role="columnheader">延迟</div>
+              <div class="selection-cell" role="columnheader">速度</div>
+            </div>
+            <div id="entryCandidateRows" role="rowgroup">
+              <div class="selection-empty">请先拉取 IP。</div>
+            </div>
+          </div>
         </div>
       </section>
     </section>
@@ -1717,20 +1758,18 @@
       </div>
       <div id="autoRunProgress" class="auto-run-progress" role="status" aria-live="polite"></div>
       <div class="auto-run-table-wrap">
-        <table class="auto-run-table">
-          <thead>
-            <tr>
-              <th>&#x9009;</th>
-              <th>IP&#x5730;&#x5740;:&#x7aef;&#x53e3;</th>
-              <th>&#x51fa;&#x53e3;</th>
-              <th>&#x5730;&#x533a;</th>
-              <th>&#x5ef6;&#x8fdf;</th>
-            </tr>
-          </thead>
-          <tbody id="autoRunRows">
-            <tr><td colspan="5" class="hint">&#x8bf7;&#x5148;&#x9009;&#x62e9;&#x56fd;&#x5bb6;&#x3002;</td></tr>
-          </tbody>
-        </table>
+        <div class="selection-list" role="table" aria-label="落地 IP">
+          <div class="selection-header auto-run-grid" role="row">
+            <div class="selection-cell selection-mark" role="columnheader">&#x9009;</div>
+            <div class="selection-cell" role="columnheader">IP&#x5730;&#x5740;:&#x7aef;&#x53e3;</div>
+            <div class="selection-cell" role="columnheader">&#x51fa;&#x53e3;</div>
+            <div class="selection-cell" role="columnheader">&#x5730;&#x533a;</div>
+            <div class="selection-cell" role="columnheader">&#x5ef6;&#x8fdf;</div>
+          </div>
+          <div id="autoRunRows" role="rowgroup">
+            <div class="selection-empty">&#x8bf7;&#x5148;&#x9009;&#x62e9;&#x56fd;&#x5bb6;&#x3002;</div>
+          </div>
+        </div>
       </div>
       <div class="auto-run-actions">
         <button id="autoRunImport" class="warn" type="button" disabled>&#x5bfc;&#x5165; 9 &#x4e2a;IP</button>
@@ -1842,6 +1881,8 @@
         settings: null,
         testing: false,
         cancel: false,
+        dragging: false,
+        dragMode: true,
         tested: 0,
         ok: 0,
         runId: 0
@@ -1859,7 +1900,9 @@
         rows: [],
         selected: new Set(),
         line: "ALL",
-        loading: false
+        loading: false,
+        dragging: false,
+        dragMode: true
       },
       catalogSummary: null,
       links: {},
@@ -2741,22 +2784,22 @@
       const rows = entryCandidateVisibleRows();
       if (!rows.length) {
         const emptyText = state.entryCandidate.loading ? "正在拉取 IP..." : (state.entryCandidate.rows.length ? "当前线路暂无入口。" : "请先拉取 IP。");
-        fields.entryCandidateRows.innerHTML = '<tr><td colspan="5" class="hint">' + escapeHtml(emptyText) + '</td></tr>';
+        fields.entryCandidateRows.innerHTML = '<div class="selection-empty">' + escapeHtml(emptyText) + '</div>';
         renderEntryCandidateProgress();
         return;
       }
       fields.entryCandidateRows.innerHTML = rows.map((row) => {
         const id = entryCandidateRowId(row);
         const endpoint = entryCandidateEndpoint(row);
-        const checked = state.entryCandidate.selected.has(id) ? " checked" : "";
+        const selected = state.entryCandidate.selected.has(id);
         return `
-          <tr>
-            <td><input type="checkbox" data-entry-candidate-pick="${escapeHtml(id)}"${checked}></td>
-            <td class="mono">${escapeHtml(endpoint)}</td>
-            <td>${escapeHtml(entryCandidateLineName(row.line))}</td>
-            <td>${escapeHtml(entryCandidateDelayText(row))}</td>
-            <td>${escapeHtml(entryCandidateSpeedText(row))}</td>
-          </tr>
+          <div class="selection-row entry-candidate-grid${selected ? " selected" : ""}" role="row" data-entry-candidate-index="${escapeHtml(id)}">
+            <div class="selection-cell selection-mark" role="cell" data-entry-candidate-mark>${selected ? "\u2713" : ""}</div>
+            <div class="selection-cell mono" role="cell">${escapeHtml(endpoint)}</div>
+            <div class="selection-cell" role="cell">${escapeHtml(entryCandidateLineName(row.line))}</div>
+            <div class="selection-cell" role="cell">${escapeHtml(entryCandidateDelayText(row))}</div>
+            <div class="selection-cell" role="cell">${escapeHtml(entryCandidateSpeedText(row))}</div>
+          </div>
         `;
       }).join("");
       renderEntryCandidateProgress();
@@ -2776,6 +2819,7 @@
       state.entryCandidate.loading = true;
       state.entryCandidate.rows = [];
       state.entryCandidate.selected = new Set();
+      state.entryCandidate.dragging = false;
       fields.entryCandidateLoad.disabled = true;
       fields.entryCandidateStatus.textContent = "正在拉取 IP...";
       renderEntryCandidateRows();
@@ -2792,15 +2836,49 @@
       }
     }
 
-    function toggleEntryCandidatePick(id, checked) {
-      const key = String(id || "");
-      if (!key) return;
-      if (checked) {
-        state.entryCandidate.selected.add(key);
+    function setEntryCandidateRowSelected(rowElement, selected) {
+      if (!rowElement) return;
+      const id = String(rowElement.dataset.entryCandidateIndex || "");
+      if (!id) return;
+      if (selected) {
+        state.entryCandidate.selected.add(id);
       } else {
-        state.entryCandidate.selected.delete(key);
+        state.entryCandidate.selected.delete(id);
       }
-      renderEntryCandidateRows();
+      const isSelected = state.entryCandidate.selected.has(id);
+      rowElement.classList.toggle("selected", isSelected);
+      const mark = rowElement.querySelector("[data-entry-candidate-mark]");
+      if (mark) {
+        mark.textContent = isSelected ? "\u2713" : "";
+      }
+      renderEntryCandidateProgress();
+    }
+
+    function entryCandidateEventRow(event) {
+      return event.target?.closest?.("[data-entry-candidate-index]");
+    }
+
+    function beginEntryCandidateDrag(event) {
+      if (event.button !== 0 || state.entryCandidate.loading) return;
+      const row = entryCandidateEventRow(event);
+      if (!row) return;
+      event.preventDefault();
+      const id = String(row.dataset.entryCandidateIndex || "");
+      const nextSelected = !state.entryCandidate.selected.has(id);
+      state.entryCandidate.dragging = true;
+      state.entryCandidate.dragMode = nextSelected;
+      setEntryCandidateRowSelected(row, nextSelected);
+    }
+
+    function moveEntryCandidateDrag(event) {
+      if (!state.entryCandidate.dragging || state.entryCandidate.loading) return;
+      const row = entryCandidateEventRow(event);
+      if (!row) return;
+      setEntryCandidateRowSelected(row, state.entryCandidate.dragMode);
+    }
+
+    function endEntryCandidateDrag() {
+      state.entryCandidate.dragging = false;
     }
 
     function selectAllEntryCandidates() {
@@ -3051,6 +3129,8 @@
         settings,
         testing: false,
         cancel: false,
+        dragging: false,
+        dragMode: true,
         controllers: new Set(),
         tested: 0,
         ok: 0,
@@ -3068,6 +3148,7 @@
     function stopAutoRunRequests() {
       state.autoRun.cancel = true;
       state.autoRun.testing = false;
+      state.autoRun.dragging = false;
       abortAutoRunRequests();
       state.autoRun.results.forEach((result, proxy) => {
         if (result?.testing) {
@@ -3139,7 +3220,7 @@
       }).slice(0, AUTO_RUN_CANDIDATE_LIMIT);
     }
 
-    function renderAutoRunDialog() {
+    function updateAutoRunSelectionState() {
       const settings = state.autoRun.settings || readAutoSettings();
       const candidates = state.autoRun.candidates || [];
       const selectedCount = state.autoRun.selected.size;
@@ -3148,26 +3229,30 @@
       fields.autoRunProgress.textContent = "\u5019\u9009 " + candidates.length + " \u6761\uff0c\u5df2\u6d4b\u901f " + state.autoRun.tested + " / " + candidates.length + "\uff0c\u53ef\u7528 " + state.autoRun.ok + "\uff0c\u5df2\u9009 " + selectedCount + " / " + AUTO_RUN_IMPORT_LIMIT + "\u3002";
       fields.autoRunImport.disabled = !(selectedCount || state.autoRun.ok);
       fields.autoRunImport.textContent = "\u5bfc\u5165\uff08\u5df2\u9009 " + selectedCount + " / \u6700\u591a " + AUTO_RUN_IMPORT_LIMIT + "\uff09";
+    }
+
+    function renderAutoRunDialog() {
+      const candidates = state.autoRun.candidates || [];
+      updateAutoRunSelectionState();
       if (!candidates.length) {
-        fields.autoRunRows.innerHTML = '<tr><td colspan="5" class="hint">\u5f53\u524d\u56fd\u5bb6\u6ca1\u6709\u53ef\u5bfc\u5165\u7684\u5019\u9009 IP\u3002</td></tr>';
+        fields.autoRunRows.innerHTML = '<div class="selection-empty">\u5f53\u524d\u56fd\u5bb6\u6ca1\u6709\u53ef\u5bfc\u5165\u7684\u5019\u9009 IP\u3002</div>';
         return;
       }
       fields.autoRunRows.innerHTML = autoRunSortedCandidates(candidates).map((node) => {
         const proxy = endpointOf(node);
         const result = autoRunEndpointResult(proxy);
-        const checked = state.autoRun.selected.has(proxy) ? " checked" : "";
-        const disabled = (!checked && selectedCount >= AUTO_RUN_IMPORT_LIMIT) ? " disabled" : "";
+        const selected = state.autoRun.selected.has(proxy);
         const rowClass = result?.ok ? "auto-run-row-ok" : (result && !result.testing ? "auto-run-row-bad" : "");
         const exit = autoCountryLabel(node.loc || node.country || "");
         const region = [node.city, node.asn || node.org].filter(Boolean).join(" / ");
         return `
-          <tr class="${rowClass}">
-            <td><input type="checkbox" data-auto-run-pick="${escapeHtml(proxy)}"${checked}${disabled}></td>
-            <td class="mono">${escapeHtml(proxy)}</td>
-            <td>${escapeHtml(exit || "-")}</td>
-            <td>${escapeHtml(region || "-")}</td>
-            <td>${escapeHtml(autoRunDelayText(result))}</td>
-          </tr>
+          <div class="selection-row auto-run-grid ${rowClass}${selected ? " selected" : ""}" role="row" data-auto-run-proxy="${escapeHtml(proxy)}">
+            <div class="selection-cell selection-mark" role="cell" data-auto-run-mark>${selected ? "\u2713" : ""}</div>
+            <div class="selection-cell mono" role="cell">${escapeHtml(proxy)}</div>
+            <div class="selection-cell" role="cell">${escapeHtml(exit || "-")}</div>
+            <div class="selection-cell" role="cell">${escapeHtml(region || "-")}</div>
+            <div class="selection-cell" role="cell">${escapeHtml(autoRunDelayText(result))}</div>
+          </div>
         `;
       }).join("");
     }
@@ -3184,7 +3269,7 @@
       state.autoRun.testing = true;
       fields.autoRunDialog.hidden = false;
       fields.autoRunProgress.textContent = "\u6b63\u5728\u8bfb\u53d6\u5019\u9009...";
-      fields.autoRunRows.innerHTML = '<tr><td colspan="5" class="hint">\u5019\u9009\u8bfb\u53d6\u4e2d...</td></tr>';
+      fields.autoRunRows.innerHTML = '<div class="selection-empty">\u5019\u9009\u8bfb\u53d6\u4e2d...</div>';
       setStatus("\u6b63\u5728\u6253\u5f00\u5019\u9009 IP \u6d4b\u901f\u961f\u5217...");
       const controller = new AbortController();
       const controllers = state.autoRun.controllers;
@@ -3260,18 +3345,53 @@
       renderAutoRunDialog();
     }
 
-    function toggleAutoRunPick(proxy, checked) {
+    function setAutoRunRowSelected(rowElement, selected) {
+      if (!rowElement) return;
+      const proxy = String(rowElement.dataset.autoRunProxy || "");
       if (!proxy) return;
-      if (checked) {
-        if (state.autoRun.selected.size >= AUTO_RUN_IMPORT_LIMIT) {
-          renderAutoRunDialog();
+      if (selected) {
+        if (!state.autoRun.selected.has(proxy) && state.autoRun.selected.size >= AUTO_RUN_IMPORT_LIMIT) {
+          updateAutoRunSelectionState();
           return;
         }
         state.autoRun.selected.add(proxy);
       } else {
         state.autoRun.selected.delete(proxy);
       }
-      renderAutoRunDialog();
+      const isSelected = state.autoRun.selected.has(proxy);
+      rowElement.classList.toggle("selected", isSelected);
+      const mark = rowElement.querySelector("[data-auto-run-mark]");
+      if (mark) {
+        mark.textContent = isSelected ? "\u2713" : "";
+      }
+      updateAutoRunSelectionState();
+    }
+
+    function autoRunEventRow(event) {
+      return event.target?.closest?.("[data-auto-run-proxy]");
+    }
+
+    function beginAutoRunDrag(event) {
+      if (event.button !== 0) return;
+      const row = autoRunEventRow(event);
+      if (!row) return;
+      event.preventDefault();
+      const proxy = String(row.dataset.autoRunProxy || "");
+      const nextSelected = !state.autoRun.selected.has(proxy);
+      state.autoRun.dragging = true;
+      state.autoRun.dragMode = nextSelected;
+      setAutoRunRowSelected(row, nextSelected);
+    }
+
+    function moveAutoRunDrag(event) {
+      if (!state.autoRun.dragging) return;
+      const row = autoRunEventRow(event);
+      if (!row) return;
+      setAutoRunRowSelected(row, state.autoRun.dragMode);
+    }
+
+    function endAutoRunDrag() {
+      state.autoRun.dragging = false;
     }
 
     function selectedAutoRunEndpoints() {
@@ -3472,11 +3592,9 @@
         if (!button) return;
         selectEntryCandidateLine(button.dataset.entryCandidateLine || "ALL");
       });
-      fields.entryCandidateRows.addEventListener("change", (event) => {
-        const id = event.target?.dataset?.entryCandidatePick;
-        if (!id) return;
-        toggleEntryCandidatePick(id, event.target.checked);
-      });
+      fields.entryCandidateRows.addEventListener("mousedown", beginEntryCandidateDrag);
+      fields.entryCandidateRows.addEventListener("mouseover", moveEntryCandidateDrag);
+      fields.entryCandidateRows.addEventListener("mousemove", moveEntryCandidateDrag);
       fields.entryCandidateSelectAll.addEventListener("click", selectAllEntryCandidates);
       fields.entryCandidateInvert.addEventListener("click", invertEntryCandidates);
       document.querySelectorAll(".auto-region-button").forEach((button) => {
@@ -3491,11 +3609,9 @@
         selectAutoCountry(button.dataset.autoCountry || "");
       });
       document.getElementById("runAuto").addEventListener("click", () => runAuto().catch(showError));
-      fields.autoRunRows.addEventListener("change", (event) => {
-        const proxy = event.target?.dataset?.autoRunPick;
-        if (!proxy) return;
-        toggleAutoRunPick(proxy, event.target.checked);
-      });
+      fields.autoRunRows.addEventListener("mousedown", beginAutoRunDrag);
+      fields.autoRunRows.addEventListener("mouseover", moveAutoRunDrag);
+      fields.autoRunRows.addEventListener("mousemove", moveAutoRunDrag);
       fields.autoRunImport.addEventListener("click", () => autoRunImportSelected().catch(showError));
       fields.autoRunCancel.addEventListener("click", closeAutoRunDialog);
       fields.autoRunClose.addEventListener("click", closeAutoRunDialog);
@@ -3506,6 +3622,9 @@
       });
       fields.entryPickerRows.addEventListener("mousedown", beginEntryPickerDrag);
       fields.entryPickerRows.addEventListener("mouseover", moveEntryPickerDrag);
+      fields.entryPickerRows.addEventListener("mousemove", moveEntryPickerDrag);
+      document.addEventListener("mouseup", endEntryCandidateDrag);
+      document.addEventListener("mouseup", endAutoRunDrag);
       document.addEventListener("mouseup", endEntryPickerDrag);
       fields.entryPickerCountries.addEventListener("click", (event) => {
         const button = event.target.closest("[data-entry-picker-country]");
