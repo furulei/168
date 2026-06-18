@@ -1022,11 +1022,12 @@
     }
     .auto-country-buttons {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+      grid-template-columns: repeat(6, minmax(0, 1fr));
       gap: 8px;
       max-height: 360px;
       overflow: auto;
-      padding: 2px 2px 0 0;
+      padding: 2px 2px 14px 0;
+      border-bottom: 1px solid var(--line);
     }
     .auto-country-button {
       height: 42px;
@@ -1086,13 +1087,6 @@
     .auto-run-head h2 {
       margin-bottom: 6px;
       font-size: 18px;
-    }
-    .auto-run-head > button {
-      width: 160px;
-      min-width: 120px;
-      height: 44px;
-      min-height: 44px;
-      font-size: 14px;
     }
     .auto-run-subtitle,
     .auto-run-progress {
@@ -1754,7 +1748,6 @@
           <h2 id="autoRunTitle">&#x9009;&#x62e9;&#x843d;&#x5730;IP</h2>
           <div id="autoRunSubtitle" class="auto-run-subtitle"></div>
         </div>
-        <button id="autoRunClose" class="ghost" type="button">&#x5173;&#x95ed;</button>
       </div>
       <div id="autoRunProgress" class="auto-run-progress" role="status" aria-live="polite"></div>
       <div class="auto-run-table-wrap">
@@ -1945,7 +1938,6 @@
       autoRunRows: document.getElementById("autoRunRows"),
       autoRunImport: document.getElementById("autoRunImport"),
       autoRunCancel: document.getElementById("autoRunCancel"),
-      autoRunClose: document.getElementById("autoRunClose"),
       entryCandidateLoad: document.getElementById("entryCandidateLoad"),
       entryCandidateSave: document.getElementById("entryCandidateSave"),
       entryCandidateStatus: document.getElementById("entryCandidateStatus"),
@@ -2116,7 +2108,7 @@
 
     const AUTO_REGION_ORDER = ["亚洲", "欧洲", "北美", "南美", "非洲", "大洋洲"];
     const AUTO_REGION_COUNTRIES = {
-      亚洲: ["HK", "TW", "JP", "KR", "SG", "MY", "TH", "PH", "VN", "ID", "IN", "PK", "BD", "TR", "RU", "AE", "SA", "IR", "IQ", "IL", "QA", "OM", "KW", "BH", "CN", "MO", "KZ", "KG", "UZ", "TM", "TJ", "MN", "LA", "MM", "KH", "NP", "LK", "AF", "YE", "JO", "LB", "SY", "PS", "AM", "AZ", "GE"],
+      亚洲: ["HK", "TW", "JP", "KR", "SG", "MY", "TH", "PH", "VN", "ID", "IN", "PK", "BD", "TR", "RU", "AE", "SA", "IR", "IQ", "IL", "QA", "OM", "KW", "BH", "MO", "KZ", "KG", "UZ", "TM", "TJ", "MN", "LA", "MM", "KH", "NP", "LK", "AF", "YE", "JO", "LB", "SY", "PS", "AM", "AZ", "GE"],
       欧洲: ["DE", "FR", "NL", "GB", "ES", "IT", "PT", "CH", "AT", "BE", "SE", "NO", "FI", "DK", "IE", "PL", "CZ", "RO", "HU", "GR", "UA", "LV", "EE", "BG", "LT", "MD", "RS", "MK", "HR", "SK", "BY", "AL", "IS", "LI", "LU", "BA", "SI", "CY", "ME", "MT", "AD", "SM", "MC", "VA", "XK"],
       北美: ["US", "CA", "MX", "DO", "GT", "HN", "SV", "NI", "CR", "PA", "CU", "HT", "JM", "PR"],
       南美: ["BR", "AR", "CL", "CO", "PE", "VE", "UY", "PY", "BO", "EC"],
@@ -3012,7 +3004,13 @@
       return (AUTO_REGION_COUNTRIES[region] || [])
         .map((code) => ({ code, count: counts.get(code) || 0 }))
         .filter((item) => item.count > 0)
-        .sort((left, right) => (Number(right.count) || 0) - (Number(left.count) || 0));
+        .sort((left, right) => {
+          const leftLabel = autoCountryLabel(left.code);
+          const rightLabel = autoCountryLabel(right.code);
+          return Array.from(leftLabel).length - Array.from(rightLabel).length
+            || leftLabel.localeCompare(rightLabel, "zh-CN")
+            || (Number(right.count) || 0) - (Number(left.count) || 0);
+        });
     }
 
     function renderAutoRegionButtons() {
@@ -3035,7 +3033,7 @@
       if (!fields.autoCountryButtons) return;
       fields.autoCountryButtons.innerHTML = countries.map((item) => {
         const active = item.code === state.autoSelectedCountry ? " active" : "";
-        const label = autoCountryLabel(item.code) + "\n" + item.count;
+        const label = autoCountryLabel(item.code);
         return '<button class="auto-country-button' + active + '" type="button" data-auto-country="' + escapeHtml(item.code) + '">' + escapeHtml(label) + '</button>';
       }).join("");
       if (fields.autoCountryHint) {
@@ -3614,7 +3612,6 @@
       fields.autoRunRows.addEventListener("mousemove", moveAutoRunDrag);
       fields.autoRunImport.addEventListener("click", () => autoRunImportSelected().catch(showError));
       fields.autoRunCancel.addEventListener("click", closeAutoRunDialog);
-      fields.autoRunClose.addEventListener("click", closeAutoRunDialog);
       fields.autoRunDialog.addEventListener("click", (event) => {
         if (event.target?.dataset?.autoRunClose !== undefined) {
           closeAutoRunDialog();
