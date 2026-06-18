@@ -1450,7 +1450,7 @@
     <nav class="tabs" aria-label="控制台页面">
       <button class="tab active" type="button" data-view="configView">配置</button>
       <button class="tab" type="button" data-view="subView">订阅</button>
-      <button class="tab" type="button" data-view="proxyView">优选</button>
+      <button class="tab" type="button" data-view="proxyView">三网</button>
       <button class="tab" type="button" data-view="autoView">自动</button>
     </nav>
 
@@ -1569,14 +1569,13 @@
     </section>
 
     <section id="proxyView" class="view">
-      <section class="panel flat preference-workspace" aria-label="优选功能区">
+      <section class="panel flat preference-workspace" aria-label="三网功能区">
         <div class="preference-head">
           <div>
-            <h2>入口优选</h2>
             <div id="entryCandidateStatus" class="auto-run-progress" role="status" aria-live="polite">未拉取。</div>
           </div>
           <div class="preference-actions">
-            <button id="entryCandidateLoad" type="button">拉取最新IPv4</button>
+            <button id="entryCandidateLoad" type="button">拉取IP</button>
             <button id="entryCandidateSave" class="warn" type="button" disabled>保存入口</button>
           </div>
         </div>
@@ -1600,7 +1599,7 @@
               </tr>
             </thead>
             <tbody id="entryCandidateRows">
-              <tr><td colspan="5" class="hint">请先拉取最新 IPv4。</td></tr>
+              <tr><td colspan="5" class="hint">请先拉取 IP。</td></tr>
             </tbody>
           </table>
         </div>
@@ -2741,7 +2740,7 @@
     function renderEntryCandidateRows() {
       const rows = entryCandidateVisibleRows();
       if (!rows.length) {
-        const emptyText = state.entryCandidate.loading ? "正在拉取最新 IPv4..." : (state.entryCandidate.rows.length ? "当前线路暂无入口。" : "请先拉取最新 IPv4。");
+        const emptyText = state.entryCandidate.loading ? "正在拉取 IP..." : (state.entryCandidate.rows.length ? "当前线路暂无入口。" : "请先拉取 IP。");
         fields.entryCandidateRows.innerHTML = '<tr><td colspan="5" class="hint">' + escapeHtml(emptyText) + '</td></tr>';
         renderEntryCandidateProgress();
         return;
@@ -2778,14 +2777,14 @@
       state.entryCandidate.rows = [];
       state.entryCandidate.selected = new Set();
       fields.entryCandidateLoad.disabled = true;
-      fields.entryCandidateStatus.textContent = "正在拉取最新 IPv4...";
+      fields.entryCandidateStatus.textContent = "正在拉取 IP...";
       renderEntryCandidateRows();
       try {
         const data = await api(bootstrap.endpoints.entryCandidates);
         state.entryCandidate.rows = Array.isArray(data.nodes) ? data.nodes : [];
         state.entryCandidate.selected = new Set();
-        fields.entryCandidateStatus.textContent = "已拉取 " + state.entryCandidate.rows.length + " 条 IPv4，用时 " + Math.max(1, Math.round((Number(data.elapsedMs) || 0) / 1000)) + " 秒。";
-        setStatus("入口优选已拉取 " + state.entryCandidate.rows.length + " 条 IPv4。", "ok");
+        fields.entryCandidateStatus.textContent = "已拉取 " + state.entryCandidate.rows.length + " 条 IP，用时 " + Math.max(1, Math.round((Number(data.elapsedMs) || 0) / 1000)) + " 秒。";
+        setStatus("三网已拉取 " + state.entryCandidate.rows.length + " 条 IP。", "ok");
       } finally {
         state.entryCandidate.loading = false;
         fields.entryCandidateLoad.disabled = false;
