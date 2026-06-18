@@ -1817,7 +1817,7 @@
     const AUTO_RUN_IMPORT_LIMIT = 9;
     const AUTO_RUN_TEST_BATCH_SIZE = 20;
     const AUTO_RUN_TEST_CONCURRENCY = 4;
-    const AUTO_RUN_TEST_TIMEOUT_MS = 1000;
+    const AUTO_RUN_TEST_TIMEOUT_MS = 2500;
     const ENTRY_PICKER_SEED_URL = "https://raw.githubusercontent.com/furulei/168/main/seed.json";
     const ENTRY_PICKER_SAMPLE_SIZE = 30;
     const ENTRY_CANDIDATE_LINES = Object.freeze([
@@ -3158,12 +3158,12 @@
       if (!result) return state.autoRun.testing ? "\u6392\u961f\u4e2d" : "\u672a\u6d4b\u901f";
       if (result.testing) return "\u6d4b\u901f\u4e2d";
       if (!result.ok) return probeFailureText(result);
-      const value = result.googleMs ?? result.traceMs ?? result.connectMs ?? result.delayMs ?? result.latencyMs ?? result.latency;
+      const value = result.traceMs ?? result.connectMs ?? result.delayMs ?? result.latencyMs ?? result.latency;
       return Number.isFinite(Number(value)) ? Math.round(Number(value)) + "ms" : "\u53ef\u7528";
     }
 
     function autoRunLatency(result) {
-      const value = result?.googleMs ?? result?.traceMs ?? result?.connectMs ?? result?.delayMs ?? result?.latencyMs ?? result?.latency;
+      const value = result?.traceMs ?? result?.connectMs ?? result?.delayMs ?? result?.latencyMs ?? result?.latency;
       return Number.isFinite(Number(value)) ? Number(value) : Number.POSITIVE_INFINITY;
     }
 
@@ -3305,8 +3305,7 @@
           const data = await postJson(bootstrap.endpoints.proxyTest, {
             targets: chunk,
             timeoutMs: AUTO_RUN_TEST_TIMEOUT_MS,
-            concurrency: AUTO_RUN_TEST_CONCURRENCY,
-            googleAfterTrace: true
+            concurrency: AUTO_RUN_TEST_CONCURRENCY
           }, controller.signal);
           if (state.autoRun.runId !== runId || state.autoRun.cancel) return;
           const results = new Map((Array.isArray(data.results) ? data.results : []).map((result) => [String(result.proxy || ""), result]));
@@ -3452,7 +3451,7 @@
       fields.autoCandidateLimit.value = settings.candidateLimit ?? 50;
       fields.autoSaveCount.value = settings.saveCount ?? 3;
       fields.failureThreshold.value = settings.failureThreshold ?? 3;
-      fields.autoTimeoutMs.value = settings.timeoutMs ?? 1000;
+      fields.autoTimeoutMs.value = settings.timeoutMs ?? 2500;
       fields.autoConcurrency.value = settings.concurrency ?? 4;
       fields.autoHealCooldownMinutes.value = settings.autoHealCooldownMinutes ?? 10;
       fields.standbyGroupCount.value = settings.standbyGroupCount ?? 2;
@@ -3475,7 +3474,7 @@
         candidateLimit: normalizedNumber(fields.autoCandidateLimit, 50, 1, 50),
         saveCount: normalizedNumber(fields.autoSaveCount, 3, 1, 10),
         failureThreshold: normalizedNumber(fields.failureThreshold, 3, 1, 10),
-        timeoutMs: normalizedNumber(fields.autoTimeoutMs, 1000, 1000, 8000),
+        timeoutMs: normalizedNumber(fields.autoTimeoutMs, 2500, 1000, 8000),
         concurrency: normalizedNumber(fields.autoConcurrency, 4, 1, 8),
         autoHealCooldownMinutes: normalizedNumber(fields.autoHealCooldownMinutes, 10, 1, 120),
         standbyGroupCount: normalizedNumber(fields.standbyGroupCount, 2, 1, 5),

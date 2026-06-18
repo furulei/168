@@ -760,7 +760,7 @@ var WETEST_CLOUDFLARE_API_KEY = "o1zrmHAF";
 var HOSTMONIT_CLOUDFLARE_IPV4_API_URL = "https://api.hostmonit.com/get_optimization_ip";
 var HOSTMONIT_CLOUDFLARE_API_KEY = "iDetkOys";
 var UOUIN_CLOUDFLARE_API_URL = "https://api.uouin.com/app/cloudflare";
-var PROXYIP_TRACE_HOST = "cloudflare.com";
+var PROXYIP_TRACE_HOST = "speed.cloudflare.com";
 var PROXYIP_TRACE_PATH = "/cdn-cgi/trace";
 var PROXYIP_TRACE_MAX_BYTES = 64 * 1024;
 var DEFAULT_SUB_CONVERTER_URL = "";
@@ -780,7 +780,7 @@ var DEFAULT_PROXY_AUTO_SETTINGS = Object.freeze({
   status: "verified,usable",
   candidateLimit: 20,
   saveCount: 3,
-  timeoutMs: 3e3,
+  timeoutMs: 2500,
   concurrency: 4,
   keepCurrentIfHealthy: true,
   failureThreshold: 3,
@@ -3029,17 +3029,18 @@ async function probeProxyEndpoint(endpoint, workerHostname, timeoutMs) {
     } catch (error) {
       traceError = String(error?.message || error || "trace check failed").slice(0, 200);
     }
-    const google = await googleProxyEndpointCheck(endpoint, timeoutMs);
     const traceOk = Boolean(trace.exitIp && trace.loc);
-    const ok = Boolean(traceOk || google.googleOk);
     return {
       proxy: formatEndpoint(endpoint),
-      ok,
+      ok: traceOk,
       connectMs,
       ...trace,
-      ...google,
+      googleMs: null,
+      googleOk: null,
+      googleStatus: null,
+      googleError: null,
       traceError,
-      error: ok ? null : traceError || google.googleError || "proxy check failed"
+      error: traceOk ? null : traceError || "proxy check failed"
     };
   } catch (error) {
     return {

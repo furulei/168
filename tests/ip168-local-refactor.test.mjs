@@ -156,6 +156,16 @@ test("proxy probe endpoint accepts the UI timeout range", async () => {
   assert.ok(source.includes("const timeoutMs = clampNumber(body.timeoutMs, 3000, 1e3, 8e3);"));
 });
 
+test("proxy probe matches desktop trace target and skips google requests", async () => {
+  const source = await readSource();
+  const adminHtml = await readText("ip168-remote-admin-1c71e482.html");
+  assert.ok(source.includes('var PROXYIP_TRACE_HOST = "speed.cloudflare.com";'));
+  assert.ok(source.includes("timeoutMs: 2500,"));
+  assert.ok(adminHtml.includes("const AUTO_RUN_TEST_TIMEOUT_MS = 2500;"));
+  assert.equal(adminHtml.includes("googleAfterTrace: true"), false);
+  assert.equal(source.includes("const google = await googleProxyEndpointCheck(endpoint, timeoutMs);"), false);
+});
+
 test("proxy probe TLS reads do not mask timeouts with releaseLock errors", async () => {
   const source = await readSource();
   assert.equal(source.includes("withTimeout(tls.read()"), false);
@@ -169,27 +179,29 @@ test("proxy probe treats google HTTP 4xx as reachable instead of a transport fai
   assert.ok(source.includes("googleOk: status >= 200 && status < 500"));
 });
 
-test("proxy probe availability accepts trace success or google reachability", async () => {
+test("proxy probe availability uses cloudflare trace only", async () => {
   const source = await readSource();
   assert.equal(source.includes("if (!google.googleOk)"), false);
-  assert.ok(source.includes("const google = await googleProxyEndpointCheck(endpoint, timeoutMs);"));
+  assert.equal(source.includes("const google = await googleProxyEndpointCheck(endpoint, timeoutMs);"), false);
   assert.ok(source.includes("const traceOk = Boolean(trace.exitIp && trace.loc);"));
-  assert.ok(source.includes("const ok = Boolean(traceOk || google.googleOk);"));
+  assert.ok(source.includes("ok: traceOk,"));
+  assert.ok(source.includes('error: traceOk ? null : traceError || "proxy check failed"'));
 });
 
-test("proxy probe still checks google when trace fails", async () => {
+test("proxy probe keeps trace errors without google fallback", async () => {
   const source = await readSource();
   assert.ok(source.includes("let trace = {};"));
   assert.ok(source.includes("let traceError = null;"));
   assert.ok(source.includes('traceError = String(error?.message || error || "trace check failed").slice(0, 200);'));
-  assert.ok(source.includes("const ok = Boolean(traceOk || google.googleOk);"));
+  assert.equal(source.includes("const ok = Boolean(traceOk || google.googleOk);"), false);
   assert.ok(source.includes("traceError,"));
 });
 
-test("proxy probe UI can show google latency when trace latency is missing", async () => {
+test("proxy probe UI uses non-google delay fields", async () => {
   const adminHtml = await readText("ip168-remote-admin-1c71e482.html");
-  assert.ok(adminHtml.includes("probe.googleMs"));
-  assert.ok(adminHtml.includes("result.googleMs"));
+  assert.equal(adminHtml.includes("probe.googleMs"), false);
+  assert.equal(adminHtml.includes("result.googleMs"), false);
+  assert.ok(adminHtml.includes("result?.traceMs ?? result?.connectMs"));
 });
 
 test("proxy probe UI does not turn auth failures into unavailable candidates", async () => {
