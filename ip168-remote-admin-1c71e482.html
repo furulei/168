@@ -293,6 +293,24 @@
       font-size: 18px;
       font-weight: 700;
     }
+    .proxy-editor-heading {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      min-width: 0;
+    }
+    .proxy-editor-heading .proxy-editor-title {
+      min-width: 0;
+    }
+    .proxy-editor-heading button {
+      width: auto;
+      min-width: 132px;
+      height: 44px;
+      min-height: 44px;
+      padding: 0 16px;
+      white-space: nowrap;
+    }
     .proxy-textarea-wrap {
       position: relative;
       min-height: 220px;
@@ -930,10 +948,12 @@
       font-size: 14px;
       line-height: 1.45;
     }
-    .auto-run-dialog[hidden] {
+    .auto-run-dialog[hidden],
+    .entry-picker-dialog[hidden] {
       display: none;
     }
-    .auto-run-dialog {
+    .auto-run-dialog,
+    .entry-picker-dialog {
       position: fixed;
       inset: 0;
       z-index: 40;
@@ -1032,6 +1052,75 @@
       gap: 12px;
     }
     .auto-run-actions button {
+      width: 100%;
+      min-height: 52px;
+    }
+    .entry-picker-panel {
+      position: relative;
+      z-index: 1;
+      width: min(780px, calc(100vw - 32px));
+      max-height: min(720px, calc(100vh - 48px));
+      display: grid;
+      grid-template-rows: auto auto minmax(0, 1fr) auto;
+      gap: 12px;
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      background:
+        linear-gradient(116deg, rgba(66, 49, 51, 0.96), rgba(31, 31, 39, 0.97)),
+        var(--panel-soft);
+      box-shadow: 0 24px 70px rgba(0, 0, 0, 0.38);
+    }
+    .entry-picker-table-wrap {
+      min-height: 260px;
+      overflow: auto;
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.025);
+    }
+    .entry-picker-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+      user-select: none;
+    }
+    .entry-picker-table th,
+    .entry-picker-table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.18);
+      text-align: left;
+      vertical-align: middle;
+    }
+    .entry-picker-table th {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      background: rgba(33, 31, 38, 0.96);
+      color: rgba(255, 255, 255, 0.82);
+      font-weight: 760;
+    }
+    .entry-picker-table tr {
+      cursor: pointer;
+    }
+    .entry-picker-table tr:hover td {
+      background: rgba(255, 255, 255, 0.06);
+    }
+    .entry-picker-table tr.selected td {
+      background: rgba(255, 255, 255, 0.18);
+      color: #fff;
+      font-weight: 700;
+    }
+    .entry-picker-table td:first-child,
+    .entry-picker-table th:first-child {
+      width: 64px;
+      text-align: center;
+    }
+    .entry-picker-actions {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 12px;
+    }
+    .entry-picker-actions button {
       width: 100%;
       min-height: 52px;
     }
@@ -1227,7 +1316,10 @@
         <section class="panel proxy-panel">
           <div class="proxy-editors">
             <section class="proxy-editor-card proxy-entry-card">
-              <label class="proxy-editor-title" for="addText">入口IP</label>
+              <div class="proxy-editor-heading">
+                <label class="proxy-editor-title" for="addText">入口IP</label>
+                <button id="openEntryPicker" class="ghost" type="button">选择入口</button>
+              </div>
               <textarea id="addText" class="mono" spellcheck="false"></textarea>
               <div class="proxy-editor-actions">
                 <button id="saveEntry" type="button">保存入口</button>
@@ -1437,6 +1529,37 @@
       </div>
     </section>
   </div>
+  <div id="entryPickerDialog" class="entry-picker-dialog" hidden>
+    <div class="auto-run-backdrop" data-entry-picker-close></div>
+    <section class="entry-picker-panel" role="dialog" aria-modal="true" aria-labelledby="entryPickerTitle">
+      <div class="auto-run-head">
+        <div>
+          <h2 id="entryPickerTitle">选择入口</h2>
+          <div id="entryPickerSubtitle" class="auto-run-subtitle"></div>
+        </div>
+        <button id="entryPickerClose" class="ghost" type="button">关闭</button>
+      </div>
+      <div id="entryPickerProgress" class="auto-run-progress" role="status" aria-live="polite"></div>
+      <div class="entry-picker-table-wrap">
+        <table class="entry-picker-table">
+          <thead>
+            <tr>
+              <th>选择</th>
+              <th>入口</th>
+              <th>名称</th>
+            </tr>
+          </thead>
+          <tbody id="entryPickerRows">
+            <tr><td colspan="3" class="hint">暂无入口。</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="entry-picker-actions">
+        <button id="entryPickerSave" type="button">保存</button>
+        <button id="entryPickerCancel" class="ghost" type="button">取消</button>
+      </div>
+    </section>
+  </div>
   <div id="saveNotice" class="save-notice" role="status" aria-live="polite">已保存</div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -1496,6 +1619,12 @@
         ok: 0,
         runId: 0
       },
+      entryPicker: {
+        rows: [],
+        selected: new Set(),
+        dragging: false,
+        dragMode: true
+      },
       catalogSummary: null,
       links: {},
       qrUrl: ""
@@ -1507,6 +1636,7 @@
       token: document.getElementById("token"),
       subName: document.getElementById("subName"),
       fingerprint: document.getElementById("fingerprint"),
+      openEntryPicker: document.getElementById("openEntryPicker"),
       addText: document.getElementById("addText"),
       proxyMode: document.getElementById("proxyMode"),
       proxyip: document.getElementById("proxyip"),
@@ -1536,7 +1666,14 @@
       autoRunRows: document.getElementById("autoRunRows"),
       autoRunImport: document.getElementById("autoRunImport"),
       autoRunCancel: document.getElementById("autoRunCancel"),
-      autoRunClose: document.getElementById("autoRunClose")
+      autoRunClose: document.getElementById("autoRunClose"),
+      entryPickerDialog: document.getElementById("entryPickerDialog"),
+      entryPickerSubtitle: document.getElementById("entryPickerSubtitle"),
+      entryPickerProgress: document.getElementById("entryPickerProgress"),
+      entryPickerRows: document.getElementById("entryPickerRows"),
+      entryPickerSave: document.getElementById("entryPickerSave"),
+      entryPickerCancel: document.getElementById("entryPickerCancel"),
+      entryPickerClose: document.getElementById("entryPickerClose")
     };
 
     const AUTO_COUNTRY_LABELS = {
@@ -2024,6 +2161,131 @@
       fields.addText.value = state.addText;
       setStatus("入口已保存。", "ok");
       showSaveNotice("入口已保存");
+    }
+
+    function entryPickerSourceRows() {
+      return String(fields.addText.value || "")
+        .split(/\r?\n/)
+        .map((line, index) => {
+          const text = line.trim();
+          if (!text || text.startsWith("#")) return null;
+          const marker = text.lastIndexOf("#");
+          const endpoint = marker === -1 ? text : text.slice(0, marker).trim();
+          const label = marker === -1 ? "" : text.slice(marker + 1).trim();
+          if (!endpoint) return null;
+          return {
+            id: String(index),
+            line: text,
+            endpoint,
+            label: label || "-"
+          };
+        })
+        .filter(Boolean);
+    }
+
+    function updateEntryPickerProgress() {
+      const total = state.entryPicker.rows.length;
+      const selected = state.entryPicker.selected.size;
+      fields.entryPickerSubtitle.textContent = total ? "入口 " + total + " 条" : "暂无入口";
+      fields.entryPickerProgress.textContent = total ? "已选择 " + selected + " / " + total + "。" : "当前入口列表为空。";
+      fields.entryPickerSave.disabled = selected < 1;
+    }
+
+    function setEntryPickerRowSelected(rowElement, selected) {
+      if (!rowElement) return;
+      const id = String(rowElement.dataset.entryPickerIndex || "");
+      if (!id) return;
+      if (selected) {
+        state.entryPicker.selected.add(id);
+      } else {
+        state.entryPicker.selected.delete(id);
+      }
+      rowElement.classList.toggle("selected", selected);
+      const mark = rowElement.querySelector("[data-entry-picker-mark]");
+      if (mark) {
+        mark.textContent = selected ? "✓" : "";
+      }
+      updateEntryPickerProgress();
+    }
+
+    function renderEntryPickerRows() {
+      const rows = state.entryPicker.rows;
+      if (!rows.length) {
+        fields.entryPickerRows.innerHTML = '<tr><td colspan="3" class="hint">暂无入口。</td></tr>';
+        updateEntryPickerProgress();
+        return;
+      }
+      fields.entryPickerRows.innerHTML = rows.map((row) => `
+        <tr data-entry-picker-index="${escapeHtml(row.id)}">
+          <td data-entry-picker-mark></td>
+          <td class="mono">${escapeHtml(row.endpoint)}</td>
+          <td>${escapeHtml(row.label)}</td>
+        </tr>
+      `).join("");
+      updateEntryPickerProgress();
+    }
+
+    function openEntryPickerDialog() {
+      state.entryPicker.rows = entryPickerSourceRows();
+      state.entryPicker.selected = new Set();
+      state.entryPicker.dragging = false;
+      state.entryPicker.dragMode = true;
+      renderEntryPickerRows();
+      fields.entryPickerDialog.hidden = false;
+    }
+
+    function closeEntryPickerDialog() {
+      state.entryPicker.dragging = false;
+      fields.entryPickerDialog.hidden = true;
+    }
+
+    function entryPickerEventRow(event) {
+      return event.target?.closest?.("[data-entry-picker-index]");
+    }
+
+    function beginEntryPickerDrag(event) {
+      if (event.button !== 0) return;
+      const row = entryPickerEventRow(event);
+      if (!row) return;
+      event.preventDefault();
+      const id = String(row.dataset.entryPickerIndex || "");
+      const nextSelected = !state.entryPicker.selected.has(id);
+      state.entryPicker.dragging = true;
+      state.entryPicker.dragMode = nextSelected;
+      setEntryPickerRowSelected(row, nextSelected);
+    }
+
+    function moveEntryPickerDrag(event) {
+      if (!state.entryPicker.dragging) return;
+      const row = entryPickerEventRow(event);
+      if (!row) return;
+      setEntryPickerRowSelected(row, state.entryPicker.dragMode);
+    }
+
+    function endEntryPickerDrag() {
+      state.entryPicker.dragging = false;
+    }
+
+    async function saveEntryPickerSelection() {
+      const selectedRows = state.entryPicker.rows.filter((row) => state.entryPicker.selected.has(row.id));
+      if (!selectedRows.length) {
+        updateEntryPickerProgress();
+        return;
+      }
+      const previousText = fields.addText.value;
+      fields.entryPickerSave.disabled = true;
+      fields.addText.value = selectedRows.map((row) => row.line).join("\n");
+      try {
+        await saveEntry();
+        closeEntryPickerDialog();
+        setStatus("已保存 " + selectedRows.length + " 条入口。", "ok");
+      } catch (error) {
+        fields.addText.value = previousText;
+        throw error;
+      } finally {
+        fields.entryPickerSave.disabled = false;
+        updateEntryPickerProgress();
+      }
     }
 
     function readProxyConfigFromForm() {
@@ -2679,6 +2941,7 @@
       });
       document.getElementById("saveConfig").addEventListener("click", () => saveAll().catch(showError));
       document.getElementById("saveEntry").addEventListener("click", () => saveEntry().catch(showError));
+      fields.openEntryPicker.addEventListener("click", openEntryPickerDialog);
       document.getElementById("saveProxyip").addEventListener("click", () => saveProxyip().catch(showError));
       document.getElementById("saveSubName").addEventListener("click", () => saveAll().catch(showError));
       document.getElementById("reloadState").addEventListener("click", () => loadState().catch(showError));
@@ -2709,9 +2972,23 @@
           closeAutoRunDialog();
         }
       });
+      fields.entryPickerRows.addEventListener("mousedown", beginEntryPickerDrag);
+      fields.entryPickerRows.addEventListener("mouseover", moveEntryPickerDrag);
+      document.addEventListener("mouseup", endEntryPickerDrag);
+      fields.entryPickerSave.addEventListener("click", () => saveEntryPickerSelection().catch(showError));
+      fields.entryPickerCancel.addEventListener("click", closeEntryPickerDialog);
+      fields.entryPickerClose.addEventListener("click", closeEntryPickerDialog);
+      fields.entryPickerDialog.addEventListener("click", (event) => {
+        if (event.target?.dataset?.entryPickerClose !== undefined) {
+          closeEntryPickerDialog();
+        }
+      });
       document.addEventListener("keydown", (event) => {
         if (event.key === "Escape" && !fields.autoRunDialog.hidden) {
           closeAutoRunDialog();
+        }
+        if (event.key === "Escape" && !fields.entryPickerDialog.hidden) {
+          closeEntryPickerDialog();
         }
       });
       fields.proxyMode.addEventListener("change", () => {
