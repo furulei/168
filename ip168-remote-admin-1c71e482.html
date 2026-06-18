@@ -2198,12 +2198,12 @@
       if (!result) return state.autoRun.testing ? "\u6392\u961f\u4e2d" : "\u672a\u6d4b\u901f";
       if (result.testing) return "\u6d4b\u901f\u4e2d";
       if (!result.ok) return probeFailureText(result);
-      const value = result.traceMs ?? result.googleMs ?? result.connectMs ?? result.delayMs ?? result.latencyMs ?? result.latency;
+      const value = result.googleMs ?? result.traceMs ?? result.connectMs ?? result.delayMs ?? result.latencyMs ?? result.latency;
       return Number.isFinite(Number(value)) ? Math.round(Number(value)) + "ms" : "\u53ef\u7528";
     }
 
     function autoRunLatency(result) {
-      const value = result?.traceMs ?? result?.googleMs ?? result?.connectMs ?? result?.delayMs ?? result?.latencyMs ?? result?.latency;
+      const value = result?.googleMs ?? result?.traceMs ?? result?.connectMs ?? result?.delayMs ?? result?.latencyMs ?? result?.latency;
       return Number.isFinite(Number(value)) ? Number(value) : Number.POSITIVE_INFINITY;
     }
 
@@ -2322,7 +2322,7 @@
             targets: chunk,
             timeoutMs: AUTO_RUN_TEST_TIMEOUT_MS,
             concurrency: AUTO_RUN_TEST_CONCURRENCY,
-            traceOnly: true
+            googleAfterTrace: true
           });
         } catch (error) {
           if (state.autoRun.runId !== runId || state.autoRun.cancel) return;
