@@ -704,6 +704,9 @@ var UserlandTlsClient = class {
 };
 var CONFIG_KV_KEY = "pg.json";
 var ENTRY_ENDPOINTS_KV_KEY = "rk.txt";
+var ENTRY_SEED_URL = "https://raw.githubusercontent.com/furulei/168/main/seed.json";
+var ENTRY_SEED_COUNTRIES = Object.freeze(["SG", "US", "JP", "DE", "NL"]);
+var ENTRY_SEED_PER_COUNTRY = 5;
 var PROXY_HEALTH_KV_KEY = "fd.jk.json";
 var PROXY_AUTO_KV_KEY = "fd.zd.json";
 var PROXY_AUTO_STATE_KV_KEY = "fd.zt.json";
@@ -747,13 +750,11 @@ var ADMIN_CORS_HEADERS = Object.freeze({
 var ROUTES = Object.freeze({
   PUBLIC_ROOT: "/",
   ADMIN_ROOT: "/a",
-  ADMIN_ALIAS: "/admin",
   SUBSCRIPTION: "/sub"
 });
-var PROXYIP_CATALOG_SUMMARY_URL = "";
-var PROXYIP_CATALOG_IPV4_URL = "";
-var PROXYIP_CATALOG_IPV6_URL = "";
-var PROXYIP_CATALOG_QUERY_URL = "";
+var PROXYIP_CATALOG_SUMMARY_URL = "https://raw.githubusercontent.com/furulei/cf/main/proxyip/summary.json";
+var PROXYIP_CATALOG_IPV4_URL = "https://raw.githubusercontent.com/furulei/cf/main/proxyip/ipv4.json";
+var PROXYIP_CATALOG_IPV6_URL = "https://raw.githubusercontent.com/furulei/cf/main/proxyip/ipv6.json";
 var ENTRY_CANDIDATE_FETCH_TIMEOUT_MS = 12e3;
 var WETEST_CLOUDFLARE_IPV4_API_URL = "https://www.wetest.vip/api/cf2dns/get_cloudflare_ip";
 var WETEST_CLOUDFLARE_API_KEY = "o1zrmHAF";
@@ -766,11 +767,7 @@ var PROXYIP_TRACE_MAX_BYTES = 64 * 1024;
 var DEFAULT_SUB_CONVERTER_URL = "https://sub.ip168.dpdns.org";
 var DEFAULT_SUB_NAME = "\u5F52\u6765\u4ECD\u5C11\u5E74";
 var ADMIN_PAGE_CACHE_TTL_SECONDS = 86400;
-var ADMIN_PAGE_KV_KEY = "ym:index.v6.html";
-var ADMIN_PAGE_KV_CACHE_VERSION = "2026-06-13-sub-v7";
-var ADMIN_PAGE_KV_CACHE_TTL_MS = 24 * 60 * 60 * 1e3;
-var VENDOR_QRCODE_PATH = "/vendor/qrcode.min.js";
-var VENDOR_QRCODE_KV_KEY = "vendor/qrcode.min.js";
+var DEFAULT_ADMIN_PAGE_URL = "https://raw.githubusercontent.com/furulei/168/main/ip168-remote-admin-1c71e482.html?v=31c62ed";
 var DEFAULT_PROXY_AUTO_SETTINGS = Object.freeze({
   enabled: false,
   ipVersion: "4",
@@ -809,12 +806,10 @@ function getAdminBasePath(env) {
 __name(getAdminBasePath, "getAdminBasePath");
 function getAdminEntryBasePath(pathname, basePath) {
   const path = String(pathname || "");
-  const bases = [normalizePathAlias(basePath), ROUTES.ADMIN_ALIAS].filter(Boolean);
-  for (const base of bases) {
-    const baseWithSlash = `${base}/`;
-    if (path === base || path.startsWith(baseWithSlash)) {
-      return base;
-    }
+  const base = normalizePathAlias(basePath);
+  const baseWithSlash = `${base}/`;
+  if (base && (path === base || path.startsWith(baseWithSlash))) {
+    return base;
   }
   return "";
 }
@@ -856,12 +851,13 @@ function getProxyIpCatalogUrl(env, kind) {
   if (normalized === "ipv6" || normalized === "v6" || normalized === "6") {
     return normalizeOptionalUrl(envText(env, "PROXYIP_CATALOG_IPV6_URL")) || PROXYIP_CATALOG_IPV6_URL;
   }
-  if (normalized === "query") {
-    return normalizeOptionalUrl(envText(env, "PROXYIP_CATALOG_QUERY_URL")) || PROXYIP_CATALOG_QUERY_URL;
-  }
   return "";
 }
 __name(getProxyIpCatalogUrl, "getProxyIpCatalogUrl");
+function getEntrySeedUrl(env) {
+  return normalizeOptionalUrl(envText(env, "ENTRY_SEED_URL")) || ENTRY_SEED_URL;
+}
+__name(getEntrySeedUrl, "getEntrySeedUrl");
 function validatePort(rawPort, defaultPort) {
   if (rawPort === void 0 || rawPort === null || rawPort === "") {
     return defaultPort;
@@ -971,6 +967,85 @@ function parseEntryEndpoints(text) {
   return endpoints;
 }
 __name(parseEntryEndpoints, "parseEntryEndpoints");
+function seedRandomIndex(length) {
+  const size = Math.max(0, Number(length) || 0);
+  if (!size) {
+    return 0;
+  }
+  if (globalThis.crypto?.getRandomValues) {
+    const buffer = new Uint32Array(1);
+    globalThis.crypto.getRandomValues(buffer);
+    return buffer[0] % size;
+  }
+  return Math.floor(Math.random() * size);
+}
+__name(seedRandomIndex, "seedRandomIndex");
+function sampleSeedEntries(entries, count) {
+  const pool = Array.isArray(entries) ? [...entries] : [];
+  const selected = [];
+  const limit = Math.max(0, Math.min(pool.length, Number(count) || 0));
+  while (selected.length < limit) {
+    const index = seedRandomIndex(pool.length);
+    selected.push(pool.splice(index, 1)[0]);
+  }
+  return selected;
+}
+__name(sampleSeedEntries, "sampleSeedEntries");
+function normalizeEntrySeedLine(rawValue) {
+  const line = String(rawValue || "").trim();
+  if (!line) {
+    return "";
+  }
+  const endpoints = parseEntryEndpoints(line);
+  if (!endpoints.length) {
+    return "";
+  }
+  const endpoint = endpoints[0];
+  const text = formatEndpoint(endpoint);
+  return endpoint.label ? `${text}#${endpoint.label}` : text;
+}
+__name(normalizeEntrySeedLine, "normalizeEntrySeedLine");
+function entrySeedCountryEntries(seed, countryCode) {
+  const countries = seed?.countries && typeof seed.countries === "object" ? seed.countries : {};
+  const source = countries[String(countryCode || "").toUpperCase()];
+  const rawEntries = Array.isArray(source) ? source : Array.isArray(source?.entries) ? source.entries : [];
+  const entries = [];
+  const seen = new Set();
+  for (const rawEntry of rawEntries) {
+    const entry = normalizeEntrySeedLine(rawEntry);
+    const key = entry.toLowerCase();
+    if (entry && !seen.has(key)) {
+      seen.add(key);
+      entries.push(entry);
+    }
+  }
+  return entries;
+}
+__name(entrySeedCountryEntries, "entrySeedCountryEntries");
+function entrySeedCountryName(seed, countryCode) {
+  const code = String(countryCode || "").toUpperCase();
+  const countries = seed?.countries && typeof seed.countries === "object" ? seed.countries : {};
+  const source = countries[code];
+  return String(source?.name || code).trim() || code;
+}
+__name(entrySeedCountryName, "entrySeedCountryName");
+function buildEntrySeedText(seed) {
+  const rawCount = Number(seed?.perCountry ?? ENTRY_SEED_PER_COUNTRY);
+  const perCountry = Number.isFinite(rawCount) ? Math.max(1, Math.min(50, Math.round(rawCount))) : ENTRY_SEED_PER_COUNTRY;
+  const lines = [];
+  for (const countryCode of ENTRY_SEED_COUNTRIES) {
+    const countryName = entrySeedCountryName(seed, countryCode);
+    const selected = sampleSeedEntries(entrySeedCountryEntries(seed, countryCode), perCountry);
+    selected.forEach((line, index) => {
+      const endpoint = parseEntryEndpoints(line)[0];
+      if (endpoint) {
+        lines.push(`${formatEndpoint(endpoint)}#${countryName}${index + 1}`);
+      }
+    });
+  }
+  return lines.join("\n");
+}
+__name(buildEntrySeedText, "buildEntrySeedText");
 function parseProxyEndpoints(text) {
   const endpoints = [];
   const seen = new Set();
@@ -1338,15 +1413,49 @@ async function saveConfig(env, config, requestHostname) {
 }
 __name(saveConfig, "saveConfig");
 async function loadEntryEndpointsText(env) {
-  return await readCachedKvText(env, ENTRY_ENDPOINTS_KV_KEY, KV_CACHE_TTL_MS, {
+  const stored = await readCachedKvText(env, ENTRY_ENDPOINTS_KV_KEY, KV_CACHE_TTL_MS, {
     fallback: ""
   }) || "";
+  if (String(stored).trim()) {
+    return stored;
+  }
+  return await initializeEntryEndpointsText(env) || "";
 }
 __name(loadEntryEndpointsText, "loadEntryEndpointsText");
 async function saveEntryEndpointsText(env, text) {
   await writeKvTextAndCache(env, ENTRY_ENDPOINTS_KV_KEY, String(text || ""), KV_CACHE_TTL_MS);
 }
 __name(saveEntryEndpointsText, "saveEntryEndpointsText");
+async function fetchEntrySeedText(env) {
+  const seedUrl = getEntrySeedUrl(env);
+  if (!seedUrl) {
+    return "";
+  }
+  const response = await fetch(seedUrl, {
+    headers: { Accept: "application/json" },
+    cf: { cacheEverything: true, cacheTtl: 300 }
+  });
+  if (!response.ok) {
+    throw new Error(`entry seed HTTP ${response.status}`);
+  }
+  const seed = await response.json();
+  return buildEntrySeedText(seed);
+}
+__name(fetchEntrySeedText, "fetchEntrySeedText");
+async function initializeEntryEndpointsText(env) {
+  try {
+    const seededText = await fetchEntrySeedText(env);
+    if (!String(seededText || "").trim()) {
+      return "";
+    }
+    await saveEntryEndpointsText(env, seededText);
+    return seededText;
+  } catch (error) {
+    console.warn("[entry-seed] failed to initialize rk.txt", error);
+    return "";
+  }
+}
+__name(initializeEntryEndpointsText, "initializeEntryEndpointsText");
 function hashTextHex(value) {
   const text = String(value || "");
   let hash = 2166136261;
@@ -2582,16 +2691,15 @@ function buildAdminBootstrap(requestUrl, adminBasePath, env) {
     converterUrl: getSubscriptionConverterBaseUrl(env),
     catalog: {
       summaryUrl: `${base}/fd/jk/summary`,
-      queryUrl: getProxyIpCatalogUrl(env, "query"),
       ipv4Url: `${base}/fd/jk/ipv4`,
       ipv6Url: `${base}/fd/jk/ipv6`
     }
   };
 }
 __name(buildAdminBootstrap, "buildAdminBootstrap");
-async function loadAdminPageHtml(env) {
+async function fetchRemoteAdminHtml(remoteUrl) {
   const cache = globalThis.caches?.default;
-  const cacheKey = new Request("https://worker.local/admin-page-kv/" + ADMIN_PAGE_KV_CACHE_VERSION + "/" + ADMIN_PAGE_KV_KEY, { method: "GET" });
+  const cacheKey = new Request(remoteUrl, { method: "GET" });
   if (cache) {
     try {
       const cached = await cache.match(cacheKey);
@@ -2599,46 +2707,53 @@ async function loadAdminPageHtml(env) {
         return { ok: true, status: cached.status, html: await cached.text() };
       }
     } catch (error) {
-      console.warn("[admin] cache read failed", error);
+      console.warn("[admin] remote cache read failed", error);
     }
   }
   try {
-    const kvHtml = await readCachedKvText(env, ADMIN_PAGE_KV_KEY, ADMIN_PAGE_KV_CACHE_TTL_MS, { allowFallback: false });
-    if (/<html[\s>]|<!doctype/i.test(kvHtml)) {
-      if (cache) {
-        try {
-          await cache.put(cacheKey, new Response(kvHtml, {
-            headers: {
-              "Content-Type": "text/html; charset=utf-8",
-              "Cache-Control": `public, max-age=${ADMIN_PAGE_CACHE_TTL_SECONDS}`
-            }
-          }));
-        } catch (error) {
-          console.warn("[admin] cache write failed", error);
-        }
+    const upstream = await fetch(remoteUrl, {
+      headers: {
+        Accept: "text/html,application/xhtml+xml",
+        "User-Agent": "IP168-Worker"
       }
-      return { ok: true, status: 200, html: kvHtml };
+    });
+    const html = await upstream.text();
+    if (!upstream.ok || !/<html[\s>]|<!doctype/i.test(html)) {
+      return { ok: false, status: upstream.status, html: "" };
     }
+    if (cache) {
+      try {
+        await cache.put(cacheKey, new Response(html, {
+          headers: {
+            "Content-Type": "text/html; charset=utf-8",
+            "Cache-Control": `public, max-age=${ADMIN_PAGE_CACHE_TTL_SECONDS}`
+          }
+        }));
+      } catch (error) {
+        console.warn("[admin] remote cache write failed", error);
+      }
+    }
+    return { ok: true, status: upstream.status, html };
   } catch (error) {
-    console.warn("[admin] KV page read failed", error);
+    console.warn("[admin] remote page fetch failed", error);
+    return { ok: false, status: 502, html: "" };
   }
-  return { ok: false, status: 404, html: "" };
+}
+__name(fetchRemoteAdminHtml, "fetchRemoteAdminHtml");
+async function loadAdminPageHtml() {
+  return fetchRemoteAdminHtml(DEFAULT_ADMIN_PAGE_URL);
 }
 __name(loadAdminPageHtml, "loadAdminPageHtml");
 async function renderStaticAdminPage(request, env, adminBasePath) {
-  const upstream = await loadAdminPageHtml(env);
+  const upstream = await loadAdminPageHtml();
   if (!upstream.ok) {
     return htmlResponse(
-      `<!doctype html><html><meta charset="utf-8"><title>IP168 Admin</title><body><h1>IP168 Admin</h1><p>Admin page is not installed in KV.</p></body></html>`,
-      { status: 404 }
+      `<!doctype html><html><meta charset="utf-8"><title>IP168 Admin</title><body><h1>IP168 Admin</h1><p>Admin page is unavailable.</p></body></html>`,
+      { status: upstream.status || 502 }
     );
   }
   const bootstrap = `<script>window.IP168_BOOTSTRAP=${safeScriptJson(buildAdminBootstrap(request.url, adminBasePath, env))};<\/script>`;
   let html = upstream.html;
-  html = html.replace(/url\.searchParams\.set\("v",\s*"2026-06-13-v[2-5]"\);/g, `url.searchParams.set("v", "${SUB_URL_VERSION}");`);
-  if (!html.includes(`url.searchParams.set("v", "${SUB_URL_VERSION}")`) && html.includes('url.searchParams.set("token", token);')) {
-    html = html.replace('url.searchParams.set("token", token);', `url.searchParams.set("token", token);\n      url.searchParams.set("v", "${SUB_URL_VERSION}");`);
-  }
   if (html.includes('<script id="ip168-bootstrap-anchor"></script>')) {
     html = html.replace('<script id="ip168-bootstrap-anchor"></script>', bootstrap);
   } else if (/<\/head>/i.test(html)) {
@@ -2649,19 +2764,6 @@ async function renderStaticAdminPage(request, env, adminBasePath) {
   return htmlResponse(html);
 }
 __name(renderStaticAdminPage, "renderStaticAdminPage");
-async function renderQrCodeVendorAsset(env) {
-  const js = await readCachedKvText(env, VENDOR_QRCODE_KV_KEY, ADMIN_PAGE_KV_CACHE_TTL_MS, { allowFallback: false });
-  if (!js) {
-    return new Response("Not Found", { status: 404 });
-  }
-  return new Response(js, {
-    headers: {
-      "Content-Type": "application/javascript; charset=utf-8",
-      "Cache-Control": "public, max-age=86400"
-    }
-  });
-}
-__name(renderQrCodeVendorAsset, "renderQrCodeVendorAsset");
 var decoder = new TextDecoder("utf-8", { fatal: true });
 function ensureAvailable(bytes, offset, length) {
   if (offset + length > bytes.byteLength) {
@@ -4078,9 +4180,6 @@ var worker_ip168_proxy_mode_default = {
       }
       const adminBasePath = getAdminBasePath(env);
       const adminEntryBasePath = getAdminEntryBasePath(url.pathname, adminBasePath);
-      if (request.method === "GET" && url.pathname === VENDOR_QRCODE_PATH) {
-        return await renderQrCodeVendorAsset(env);
-      }
       if (url.pathname === ROUTES.SUBSCRIPTION) {
         return await handleSubscription(request, env, url, ctx);
       }

@@ -20,13 +20,13 @@ test("ip168 source switches to the new kv key names", async () => {
   assert.ok(source.includes('var PROXY_HEALTH_KV_KEY = "fd.jk.json";'));
   assert.ok(source.includes('var PROXY_AUTO_KV_KEY = "fd.zd.json";'));
   assert.ok(source.includes('var PROXY_AUTO_STATE_KV_KEY = "fd.zt.json";'));
-  assert.ok(source.includes('var ADMIN_PAGE_KV_KEY = "ym:index.html";'));
+  assert.equal(source.includes("ADMIN_PAGE_KV_KEY"), false);
 });
 
 test("ip168 source defaults the admin root to /a and exposes the new short routes", async () => {
   const source = await readSource();
   assert.ok(source.includes('ADMIN_ROOT: "/a"'));
-  assert.ok(source.includes('ADMIN_ALIAS: "/admin"'));
+  assert.equal(source.includes("ADMIN_ALIAS"), false);
   assert.ok(source.includes("/ht/dl"));
   assert.ok(source.includes("/pg/du"));
   assert.ok(source.includes("/pg/xie"));
@@ -35,9 +35,10 @@ test("ip168 source defaults the admin root to /a and exposes the new short route
   assert.ok(source.includes("/fd/zd/ce"));
 });
 
-test("ip168 source accepts the legacy /admin alias for the admin entry", async () => {
+test("ip168 source only accepts the configured admin entry", async () => {
   const source = await readSource();
-  assert.ok(source.includes('const bases = [normalizePathAlias(basePath), ROUTES.ADMIN_ALIAS].filter(Boolean);'));
+  assert.equal(source.includes('ROUTES.ADMIN_ALIAS'), false);
+  assert.ok(source.includes('const base = normalizePathAlias(basePath);'));
 });
 
 test("ip168 source removes legacy admin api routes", async () => {
@@ -51,12 +52,14 @@ test("ip168 source removes legacy admin api routes", async () => {
   assert.equal(source.includes("/api/proxy/run"), false);
 });
 
-test("ip168 source removes remote admin page fallback", async () => {
+test("ip168 source uses the bundled remote admin page", async () => {
   const source = await readSource();
   assert.equal(source.includes("REMOTE_ADMIN_PAGE_URL"), false);
-  assert.equal(source.includes("ADMIN_PAGE_URL"), false);
-  assert.equal(source.includes("fetchRemoteAdminHtml"), false);
+  assert.ok(source.includes('var DEFAULT_ADMIN_PAGE_URL = "https://raw.githubusercontent.com/furulei/168/main/ip168-remote-admin-1c71e482.html'));
+  assert.ok(source.includes("fetchRemoteAdminHtml"));
   assert.equal(source.includes("getRemoteAdminPageUrl"), false);
+  assert.equal(source.includes("ADMIN_PAGE_KV_KEY"), false);
+  assert.equal(source.includes("renderQrCodeVendorAsset"), false);
 });
 
 test("repository keeps deployment-specific config out of source control", async () => {
@@ -85,7 +88,6 @@ test("repository does not contain known instance identifiers or secrets", async 
     new RegExp(["cf", "at_"].join(""), "i"),
     new RegExp(["github", "_pat_"].join(""), "i"),
     new RegExp(["workers", "\\.dev"].join(""), "i"),
-    new RegExp(["furu", "lei"].join(""), "i"),
     new RegExp("__" + "IP168" + "_[A-Z0-9_]+")
   ]) {
     assert.equal(pattern.test(combined), false, String(pattern));
@@ -123,13 +125,14 @@ test("ip168 source removes legacy env aliases and source comments", async () => 
   assert.equal(source.includes("<!--IP168_BOOTSTRAP-->"), false);
 });
 
-test("default converter is configured and proxy catalog defaults stay empty", async () => {
+test("single-js defaults include seed, converter, and proxy catalog urls", async () => {
   const source = await readSource();
+  assert.ok(source.includes('var ENTRY_SEED_URL = "https://raw.githubusercontent.com/furulei/168/main/seed.json";'));
   assert.ok(source.includes('var DEFAULT_SUB_CONVERTER_URL = "https://sub.ip168.dpdns.org";'));
-  assert.ok(source.includes('var PROXYIP_CATALOG_SUMMARY_URL = "";'));
-  assert.ok(source.includes('var PROXYIP_CATALOG_IPV4_URL = "";'));
-  assert.ok(source.includes('var PROXYIP_CATALOG_IPV6_URL = "";'));
-  assert.ok(source.includes('var PROXYIP_CATALOG_QUERY_URL = "";'));
+  assert.ok(source.includes('var PROXYIP_CATALOG_SUMMARY_URL = "https://raw.githubusercontent.com/furulei/cf/main/proxyip/summary.json";'));
+  assert.ok(source.includes('var PROXYIP_CATALOG_IPV4_URL = "https://raw.githubusercontent.com/furulei/cf/main/proxyip/ipv4.json";'));
+  assert.ok(source.includes('var PROXYIP_CATALOG_IPV6_URL = "https://raw.githubusercontent.com/furulei/cf/main/proxyip/ipv6.json";'));
+  assert.equal(source.includes("PROXYIP_CATALOG_QUERY_URL"), false);
   assert.ok(source.includes("enabled: false"));
 });
 
