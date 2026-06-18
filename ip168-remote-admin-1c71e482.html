@@ -2116,13 +2116,12 @@
       大洋洲: ["AU", "NZ", "FJ", "PG", "SB", "VU"]
     };
 
-    function setStatus(text, type) {
+    function setSubscriptionStatus(text, type) {
       statusEl.textContent = text || "";
       statusEl.className = "status subscription-status" + (type ? " " + type : "");
     }
 
     function showSaveNotice(text = "已保存") {
-      if (saveNoticeActive) return;
       saveNoticeActive = true;
       saveNoticeEl.textContent = text;
       saveNoticeEl.classList.add("active");
@@ -2332,11 +2331,11 @@
       const qrBox = document.getElementById("qrCanvas");
       qrBox.innerHTML = "";
       if (!state.qrUrl) {
-        setStatus("\u6ca1\u6709\u53ef\u751f\u6210\u4e8c\u7ef4\u7801\u7684\u8ba2\u9605\u94fe\u63a5\u3002", "error");
+        setSubscriptionStatus("\u6ca1\u6709\u53ef\u751f\u6210\u4e8c\u7ef4\u7801\u7684\u8ba2\u9605\u94fe\u63a5\u3002", "error");
         return;
       }
       if (!window.QRCode) {
-        setStatus("\u4e8c\u7ef4\u7801\u5e93\u672a\u52a0\u8f7d\uff0c\u94fe\u63a5\u4ecd\u53ef\u590d\u5236\u3002", "error");
+        setSubscriptionStatus("\u4e8c\u7ef4\u7801\u5e93\u672a\u52a0\u8f7d\uff0c\u94fe\u63a5\u4ecd\u53ef\u590d\u5236\u3002", "error");
         return;
       }
       try {
@@ -2346,9 +2345,9 @@
           height: 320,
           correctLevel: window.QRCode.CorrectLevel.M
         });
-        setStatus(label + " \u4e8c\u7ef4\u7801", "ok");
+        setSubscriptionStatus(label + " \u4e8c\u7ef4\u7801", "ok");
       } catch {
-        setStatus("\u4e8c\u7ef4\u7801\u751f\u6210\u5931\u8d25\u3002", "error");
+        setSubscriptionStatus("\u4e8c\u7ef4\u7801\u751f\u6210\u5931\u8d25\u3002", "error");
       }
     }
 
@@ -2383,7 +2382,7 @@
     async function copyText(value, label) {
       if (!value) return;
       const copiedLabel = label || "链接";
-      setStatus("已复制 " + copiedLabel, "ok");
+      setSubscriptionStatus("已复制 " + copiedLabel, "ok");
       if (copyTextWithSelection(value)) {
         return;
       }
@@ -2405,7 +2404,7 @@
     }
 
     async function saveAll() {
-      setStatus("正在保存配置...");
+      showSaveNotice("正在保存配置...");
       const config = readConfigFromForm();
       const autoSettings = readAutoSettings();
       const [data, autoData] = await Promise.all([
@@ -2426,11 +2425,11 @@
       fillForm(state.config, state.addText);
       fillAutoForm(state.auto.settings);
       renderAutoState(state.auto.state, state.currentProxyip);
-      setStatus("配置已保存。", "ok");
+      showSaveNotice("配置已保存。");
     }
 
     async function saveEntry() {
-      setStatus("正在保存入口...");
+      showSaveNotice("正在保存入口...");
       const config = clone(state.config);
       const data = await postJson(bootstrap.endpoints.save, {
         config,
@@ -2439,8 +2438,7 @@
       state.config = data.config || config;
       state.addText = data.addText ?? fields.addText.value;
       fields.addText.value = state.addText;
-      setStatus("入口已保存。", "ok");
-      showSaveNotice("入口已保存");
+      showSaveNotice("入口已保存。");
     }
 
     function entryPickerCountryInfo(countryCode) {
@@ -2662,7 +2660,7 @@
       try {
         await saveEntry();
         closeEntryPickerDialog();
-        setStatus("已保存 " + selectedRows.length + " 条入口。", "ok");
+        showSaveNotice("已保存 " + selectedRows.length + " 条入口。");
       } catch (error) {
         fields.addText.value = previousText;
         throw error;
@@ -2688,7 +2686,7 @@
     }
 
     async function saveProxyip() {
-      setStatus("正在保存出口...");
+      showSaveNotice("正在保存出口...");
       fields.autoEnabled.checked = fields.proxyMode.value === "auto";
       const config = readProxyConfigFromForm();
       const autoSettings = readAutoSettings();
@@ -2710,15 +2708,14 @@
       fillForm(state.config, state.addText);
       fillAutoForm(state.auto.settings);
       renderAutoState(state.auto.state, state.currentProxyip);
-      setStatus("出口已保存。", "ok");
-      showSaveNotice("出口已保存");
+      showSaveNotice("出口已保存。");
     }
 
     async function refreshEntries() {
       const data = await api(bootstrap.endpoints.entries);
       state.addText = data.addText || "";
       fields.addText.value = state.addText;
-      setStatus("入口已刷新。", "ok");
+      showSaveNotice("入口已刷新。");
     }
 
     function entryCandidateLineInfo(line) {
@@ -2820,7 +2817,6 @@
         state.entryCandidate.rows = Array.isArray(data.nodes) ? data.nodes : [];
         state.entryCandidate.selected = new Set();
         fields.entryCandidateStatus.textContent = "已拉取 " + state.entryCandidate.rows.length + " 条 IP，用时 " + Math.max(1, Math.round((Number(data.elapsedMs) || 0) / 1000)) + " 秒。";
-        setStatus("三网已拉取 " + state.entryCandidate.rows.length + " 条 IP。", "ok");
       } finally {
         state.entryCandidate.loading = false;
         fields.entryCandidateLoad.disabled = false;
@@ -2916,7 +2912,7 @@
       try {
         await saveEntry();
         fields.entryCandidateStatus.textContent = "已保存 " + rows.length + " 条入口。";
-        setStatus("已保存 " + rows.length + " 条入口。", "ok");
+        showSaveNotice("已保存 " + rows.length + " 条入口。");
       } catch (error) {
         fields.addText.value = previousText;
         throw error;
@@ -2959,7 +2955,7 @@
         state.catalogSummary = bootstrap.catalog?.summaryUrl ? await catalogJson(bootstrap.catalog.summaryUrl) : {};
       } catch (error) {
         state.catalogSummary = {};
-        setStatus(error.message || "\u7f3a\u5c11 IP \u4ed3\u5e93\u914d\u7f6e", "error");
+        if (fields.autoCountryHint) fields.autoCountryHint.textContent = error.message || "\u7f3a\u5c11 IP \u4ed3\u5e93\u914d\u7f6e";
       }
       fillAutoCountryOptions(catalogCountryList(state.catalogSummary, "all"));
       fillAutoPortOptions(catalogPortList(state.catalogSummary, state.autoIpVersion));
@@ -3080,7 +3076,6 @@
     function requireAutoCountrySelection() {
       const country = fields.autoCountry.value.trim().toUpperCase();
       if (country) return true;
-      setStatus("\u8bf7\u5148\u9009\u62e9\u56fd\u5bb6\uff0c\u518d\u8fd0\u884c\u81ea\u52a8\u7ef4\u62a4\u3002", "error");
       if (fields.autoCountryHint) fields.autoCountryHint.textContent = "\u672a\u9009\u62e9\u56fd\u5bb6\uff0c\u4e0d\u4f1a\u89e6\u53d1\u81ea\u52a8\u8fd0\u884c\u3002";
       return false;
     }
@@ -3268,7 +3263,6 @@
       fields.autoRunDialog.hidden = false;
       fields.autoRunProgress.textContent = "\u6b63\u5728\u8bfb\u53d6\u5019\u9009...";
       fields.autoRunRows.innerHTML = '<div class="selection-empty">\u5019\u9009\u8bfb\u53d6\u4e2d...</div>';
-      setStatus("\u6b63\u5728\u6253\u5f00\u5019\u9009 IP \u6d4b\u901f\u961f\u5217...");
       const controller = new AbortController();
       const controllers = state.autoRun.controllers;
       controllers.add(controller);
@@ -3288,7 +3282,7 @@
       const targets = state.autoRun.candidates.map(endpointOf).filter(Boolean);
       if (!targets.length) {
         state.autoRun.testing = false;
-        setStatus("\u5f53\u524d\u56fd\u5bb6\u6ca1\u6709\u5019\u9009 IP\u3002", "error");
+        fields.autoRunProgress.textContent = "\u5f53\u524d\u56fd\u5bb6\u6ca1\u6709\u5019\u9009 IP\u3002";
         return;
       }
       queueAutoRunSpeedTests(targets, runId).catch(showError);
@@ -3437,7 +3431,7 @@
       fillAutoForm(state.auto.settings);
       renderAutoState(state.auto.state, state.currentProxyip);
       closeAutoRunDialog();
-      setStatus("\u5df2\u5bfc\u5165 " + finalProxyip.length + " \u4e2a IP\u3002", "ok");
+      showSaveNotice("\u5df2\u5bfc\u5165 " + finalProxyip.length + " \u4e2a IP\u3002");
     }
 
     function closeAutoRunDialog() {
@@ -3535,7 +3529,7 @@
     }
 
     async function logout() {
-      setStatus("正在退出登录...");
+      showSaveNotice("正在退出登录...");
       const response = await fetch(logoutEndpoint(), {
         method: "POST",
         credentials: "same-origin",
@@ -3670,7 +3664,7 @@
     }
 
     function showError(error) {
-      setStatus(error.message || String(error), "error");
+      showSaveNotice(error.message || String(error));
     }
 
     document.getElementById("originPill").textContent = bootstrap.workerOrigin;
