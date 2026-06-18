@@ -866,11 +866,27 @@
       gap: 12px;
       padding-top: 0;
     }
-    .auto-picker-row {
+    .auto-filter-strip {
       display: grid;
-      grid-template-columns: repeat(8, minmax(0, 1fr));
+      grid-template-columns: minmax(0, 1fr) minmax(180px, 276px);
+      gap: 14px;
+      align-items: stretch;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--line);
+    }
+    .auto-picker-row,
+    .auto-ip-row {
+      display: grid;
       gap: 10px;
       align-items: stretch;
+    }
+    .auto-picker-row {
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+    }
+    .auto-ip-row {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      padding-left: 14px;
+      border-left: 1px solid var(--line);
     }
     .auto-region-button,
     .auto-ip-tab,
@@ -900,7 +916,7 @@
       gap: 8px;
       max-height: 360px;
       overflow: auto;
-      padding-right: 2px;
+      padding: 2px 2px 0 0;
     }
     .auto-country-button {
       min-height: 48px;
@@ -1128,8 +1144,16 @@
         width: min(var(--auto-panel-width), 100%);
         max-width: var(--auto-panel-width);
       }
+      .auto-filter-strip {
+        grid-template-columns: 1fr;
+      }
       .auto-picker-row {
         grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .auto-ip-row {
+        padding: 12px 0 0;
+        border-left: 0;
+        border-top: 1px solid var(--line);
       }
     }
     @media (max-width: 430px) {
@@ -1360,15 +1384,19 @@
           </div>
         </section>
         <section class="auto-country-panel" aria-label="&#x81ea;&#x52a8;&#x7ef4;&#x62a4;&#x56fd;&#x5bb6;&#x9009;&#x62e9;">
-          <div class="auto-picker-row">
-            <button class="auto-region-button" type="button" data-auto-region="&#x4e9a;&#x6d32;">&#x4e9a;&#x6d32;</button>
-            <button class="auto-region-button" type="button" data-auto-region="&#x6b27;&#x6d32;">&#x6b27;&#x6d32;</button>
-            <button class="auto-region-button" type="button" data-auto-region="&#x5317;&#x7f8e;">&#x5317;&#x7f8e;</button>
-            <button class="auto-region-button" type="button" data-auto-region="&#x5357;&#x7f8e;">&#x5357;&#x7f8e;</button>
-            <button class="auto-region-button" type="button" data-auto-region="&#x975e;&#x6d32;">&#x975e;&#x6d32;</button>
-            <button class="auto-region-button" type="button" data-auto-region="&#x5927;&#x6d0b;&#x6d32;">&#x5927;&#x6d0b;&#x6d32;</button>
-            <button class="auto-ip-tab active" type="button" data-auto-ip-version="4">IPv4</button>
-            <button class="auto-ip-tab" type="button" data-auto-ip-version="6">IPv6</button>
+          <div class="auto-filter-strip">
+            <div class="auto-picker-row">
+              <button class="auto-region-button" type="button" data-auto-region="&#x4e9a;&#x6d32;">&#x4e9a;&#x6d32;</button>
+              <button class="auto-region-button" type="button" data-auto-region="&#x6b27;&#x6d32;">&#x6b27;&#x6d32;</button>
+              <button class="auto-region-button" type="button" data-auto-region="&#x5317;&#x7f8e;">&#x5317;&#x7f8e;</button>
+              <button class="auto-region-button" type="button" data-auto-region="&#x5357;&#x7f8e;">&#x5357;&#x7f8e;</button>
+              <button class="auto-region-button" type="button" data-auto-region="&#x975e;&#x6d32;">&#x975e;&#x6d32;</button>
+              <button class="auto-region-button" type="button" data-auto-region="&#x5927;&#x6d0b;&#x6d32;">&#x5927;&#x6d0b;&#x6d32;</button>
+            </div>
+            <div class="auto-ip-row">
+              <button class="auto-ip-tab active" type="button" data-auto-ip-version="4">IPv4</button>
+              <button class="auto-ip-tab" type="button" data-auto-ip-version="6">IPv6</button>
+            </div>
           </div>
           <div id="autoCountryButtons" class="auto-country-buttons"></div>
           <div id="autoCountryHint" class="auto-country-hint">&#x8bf7;&#x9009;&#x62e9;&#x56fd;&#x5bb6;&#x540e;&#x70b9;&#x51fb;&#x7acb;&#x5373;&#x8fd0;&#x884c;&#x3002;</div>
