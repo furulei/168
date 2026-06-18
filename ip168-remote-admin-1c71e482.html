@@ -1108,30 +1108,19 @@
       color: #fff;
       font-weight: 760;
     }
-    .entry-picker-table {
+    .entry-picker-list {
       width: 100%;
-      max-width: 100%;
-      border-collapse: collapse;
       font-size: 14px;
-      table-layout: fixed;
       user-select: none;
     }
-    .entry-picker-col-select {
-      width: 52px;
-    }
-    .entry-picker-col-country {
-      width: 88px;
-    }
-    .entry-picker-table th,
-    .entry-picker-table td {
+    .entry-picker-header,
+    .entry-picker-row {
+      display: grid;
+      grid-template-columns: 52px minmax(0, 1fr) 88px;
+      width: 100%;
       box-sizing: border-box;
-      padding: 8px 8px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.18);
-      text-align: center;
-      vertical-align: middle;
-      line-height: 1.25;
     }
-    .entry-picker-table th {
+    .entry-picker-header {
       position: sticky;
       top: 0;
       z-index: 1;
@@ -1139,29 +1128,34 @@
       color: rgba(255, 255, 255, 0.82);
       font-weight: 760;
     }
-    .entry-picker-table tr {
+    .entry-picker-row {
       cursor: pointer;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.18);
     }
-    .entry-picker-table tr:hover td {
+    .entry-picker-row:hover {
       background: rgba(255, 255, 255, 0.06);
     }
-    .entry-picker-table tr.selected td {
+    .entry-picker-row.selected {
       background: rgba(255, 255, 255, 0.18);
       color: #fff;
       font-weight: 700;
     }
-    .entry-picker-table td:first-child,
-    .entry-picker-table th:first-child {
+    .entry-picker-cell {
+      min-width: 0;
+      box-sizing: border-box;
+      padding: 8px 8px;
       text-align: center;
+      line-height: 1.25;
     }
-    .entry-picker-table td:nth-child(3),
-    .entry-picker-table th:nth-child(3) {
-      text-align: center;
-    }
-    .entry-picker-table td:nth-child(2) {
+    .entry-picker-endpoint {
       overflow: hidden;
       text-overflow: clip;
       white-space: nowrap;
+    }
+    .entry-picker-empty {
+      padding: 16px 12px;
+      color: var(--muted);
+      text-align: center;
     }
     .entry-picker-tools {
       display: flex;
@@ -1603,23 +1597,16 @@
         <button id="entryPickerInvert" class="ghost" type="button">反选</button>
       </div>
       <div class="entry-picker-table-wrap">
-        <table class="entry-picker-table">
-          <colgroup>
-            <col class="entry-picker-col-select">
-            <col>
-            <col class="entry-picker-col-country">
-          </colgroup>
-          <thead>
-            <tr>
-              <th>选择</th>
-              <th>入口</th>
-              <th>国家</th>
-            </tr>
-          </thead>
-          <tbody id="entryPickerRows">
-            <tr><td colspan="3" class="hint">暂无入口。</td></tr>
-          </tbody>
-        </table>
+        <div class="entry-picker-list" role="table" aria-label="入口 IP">
+          <div class="entry-picker-header" role="row">
+            <div class="entry-picker-cell entry-picker-check" role="columnheader">选择</div>
+            <div class="entry-picker-cell entry-picker-endpoint" role="columnheader">入口</div>
+            <div class="entry-picker-cell entry-picker-country-cell" role="columnheader">国家</div>
+          </div>
+          <div id="entryPickerRows" class="entry-picker-rows" role="rowgroup">
+            <div class="entry-picker-empty">暂无入口。</div>
+          </div>
+        </div>
       </div>
       <div class="entry-picker-actions">
         <button id="entryPickerSave" type="button">保存</button>
@@ -2347,16 +2334,16 @@
     function renderEntryPickerRows() {
       const rows = state.entryPicker.rows;
       if (!rows.length) {
-        fields.entryPickerRows.innerHTML = '<tr><td colspan="3" class="hint">当前国家暂无入口。</td></tr>';
+        fields.entryPickerRows.innerHTML = '<div class="entry-picker-empty">当前国家暂无入口。</div>';
         updateEntryPickerProgress();
         return;
       }
       fields.entryPickerRows.innerHTML = rows.map((row) => `
-        <tr data-entry-picker-index="${escapeHtml(row.id)}" class="${state.entryPicker.selected.has(row.id) ? "selected" : ""}">
-          <td data-entry-picker-mark>${state.entryPicker.selected.has(row.id) ? "✓" : ""}</td>
-          <td class="mono">${escapeHtml(row.endpoint)}</td>
-          <td>${escapeHtml(row.label)}</td>
-        </tr>
+        <div class="entry-picker-row${state.entryPicker.selected.has(row.id) ? " selected" : ""}" role="row" data-entry-picker-index="${escapeHtml(row.id)}">
+          <div class="entry-picker-cell entry-picker-check" role="cell" data-entry-picker-mark>${state.entryPicker.selected.has(row.id) ? "✓" : ""}</div>
+          <div class="entry-picker-cell entry-picker-endpoint mono" role="cell">${escapeHtml(row.endpoint)}</div>
+          <div class="entry-picker-cell entry-picker-country-cell" role="cell">${escapeHtml(row.label)}</div>
+        </div>
       `).join("");
       updateEntryPickerProgress();
     }
@@ -2378,13 +2365,13 @@
       state.entryPicker.dragMode = true;
       fields.entryPickerDialog.hidden = false;
       renderEntryPickerCountries();
-      fields.entryPickerRows.innerHTML = '<tr><td colspan="3" class="hint">入口池读取中...</td></tr>';
+      fields.entryPickerRows.innerHTML = '<div class="entry-picker-empty">入口池读取中...</div>';
       try {
         await loadEntryPickerSeed();
         renderEntryPickerCountry(state.entryPicker.country);
       } catch (error) {
         state.entryPicker.rows = [];
-        fields.entryPickerRows.innerHTML = '<tr><td colspan="3" class="hint">入口池读取失败。</td></tr>';
+        fields.entryPickerRows.innerHTML = '<div class="entry-picker-empty">入口池读取失败。</div>';
         fields.entryPickerSave.disabled = true;
       }
     }
