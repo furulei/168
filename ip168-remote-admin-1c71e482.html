@@ -1159,9 +1159,21 @@
     }
     .entry-picker-tools {
       display: flex;
-      justify-content: flex-end;
+      align-items: center;
+      justify-content: space-between;
       gap: 10px;
       min-height: 42px;
+    }
+    .entry-picker-progress {
+      min-width: 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.35;
+    }
+    .entry-picker-tool-buttons {
+      display: flex;
+      gap: 10px;
+      flex-shrink: 0;
     }
     .entry-picker-tools button {
       width: 112px;
@@ -1593,8 +1605,11 @@
         <div id="entryPickerCountries" class="entry-picker-countries"></div>
       </div>
       <div class="entry-picker-tools">
-        <button id="entryPickerSelectAll" class="ghost" type="button">全选</button>
-        <button id="entryPickerInvert" class="ghost" type="button">反选</button>
+        <div id="entryPickerProgress" class="entry-picker-progress">当前显示 0 条，已选择 0 条。</div>
+        <div class="entry-picker-tool-buttons">
+          <button id="entryPickerSelectAll" class="ghost" type="button">全选</button>
+          <button id="entryPickerInvert" class="ghost" type="button">反选</button>
+        </div>
       </div>
       <div class="entry-picker-table-wrap">
         <div class="entry-picker-list" role="table" aria-label="入口 IP">
@@ -1735,6 +1750,7 @@
       autoRunClose: document.getElementById("autoRunClose"),
       entryPickerDialog: document.getElementById("entryPickerDialog"),
       entryPickerCountries: document.getElementById("entryPickerCountries"),
+      entryPickerProgress: document.getElementById("entryPickerProgress"),
       entryPickerSelectAll: document.getElementById("entryPickerSelectAll"),
       entryPickerInvert: document.getElementById("entryPickerInvert"),
       entryPickerRows: document.getElementById("entryPickerRows"),
@@ -2306,6 +2322,7 @@
     }
 
     function updateEntryPickerProgress() {
+      fields.entryPickerProgress.textContent = "当前显示 " + state.entryPicker.rows.length + " 条，已选择 " + state.entryPicker.selectedRows.size + " 条。";
       fields.entryPickerSave.disabled = state.entryPicker.selectedRows.size < 1;
     }
 
@@ -2365,6 +2382,7 @@
       state.entryPicker.dragMode = true;
       fields.entryPickerDialog.hidden = false;
       renderEntryPickerCountries();
+      updateEntryPickerProgress();
       fields.entryPickerRows.innerHTML = '<div class="entry-picker-empty">入口池读取中...</div>';
       try {
         await loadEntryPickerSeed();
@@ -2372,7 +2390,7 @@
       } catch (error) {
         state.entryPicker.rows = [];
         fields.entryPickerRows.innerHTML = '<div class="entry-picker-empty">入口池读取失败。</div>';
-        fields.entryPickerSave.disabled = true;
+        updateEntryPickerProgress();
       }
     }
 
