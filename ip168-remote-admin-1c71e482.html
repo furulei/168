@@ -765,118 +765,8 @@
     tr:last-child td {
       border-bottom: 0;
     }
-    .proxyip-picker-panel {
-      display: grid;
-      gap: 14px;
-    }
-    .proxyip-country-grid {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 10px;
-      min-height: 126px;
-      align-content: start;
-      padding: 10px;
-      border: 1px solid var(--line);
-      border-radius: 4px;
-      background: rgba(0, 0, 0, 0.1);
-    }
-    .proxyip-country {
-      width: 100%;
-      min-height: 58px;
-      justify-self: stretch;
-    }
-    .proxyip-country.active,
-    .proxyip-tab.active {
-      border-color: var(--line-strong);
-      background: var(--control-bg-active);
-      color: #fff;
-    }
-    .proxyip-main {
-      display: grid;
-      gap: 0;
-    }
-    .proxyip-tabs {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 10px;
-      width: min(390px, 100%);
-      justify-self: end;
-      margin-bottom: -1px;
-      position: relative;
-      z-index: 1;
-    }
-    .proxyip-tab {
-      width: 100%;
-      min-height: 58px;
-      justify-self: stretch;
-    }
-    .proxyip-table-wrap table {
-      min-width: 100%;
-      table-layout: fixed;
-    }
-    .proxyip-table-wrap th:nth-child(1),
-    .proxyip-table-wrap td:nth-child(1) {
-      width: 46px;
-      text-align: center;
-    }
-    .proxyip-table-wrap th:nth-child(2),
-    .proxyip-table-wrap td:nth-child(2) {
-      width: 42%;
-    }
-    .proxyip-table-wrap th:nth-child(3),
-    .proxyip-table-wrap td:nth-child(3) {
-      width: 16%;
-      text-align: center;
-    }
-    .proxyip-table-wrap th:nth-child(4),
-    .proxyip-table-wrap td:nth-child(4) {
-      width: 24%;
-      text-align: center;
-    }
-    .proxyip-table-wrap th:nth-child(5),
-    .proxyip-table-wrap td:nth-child(5) {
-      width: 14%;
-      text-align: center;
-    }
-    .proxyip-table-wrap input[type="checkbox"] {
-      width: 16px;
-      min-height: 16px;
-      height: 16px;
-      margin: 0;
-      justify-self: center;
-      box-shadow: none;
-      accent-color: rgba(255, 255, 255, 0.86);
-    }
-    .proxyip-footer {
-      display: grid;
-      gap: 10px;
-    }
-    .proxyip-selected-row {
-      display: grid;
-      grid-template-columns: auto 1fr;
-      gap: 10px;
-      align-items: center;
-      color: var(--muted);
-      font-size: 13px;
-    }
-    .proxyip-selected-row input {
-      width: 100%;
-      min-height: 42px;
-      text-align: left;
-      justify-self: stretch;
-    }
-    .proxyip-actions {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 10px;
-    }
-    .proxyip-actions button {
-      width: 100%;
-      min-height: 58px;
-      justify-self: stretch;
-    }
-    .proxyip-hidden-settings[hidden] {
-      display: none;
+    .preference-workspace {
+      min-height: 520px;
     }
     .ok {
       color: var(--brand-strong);
@@ -1365,60 +1255,7 @@
     </section>
 
     <section id="proxyView" class="view">
-      <section class="panel flat proxyip-picker-panel">
-        <div class="proxyip-country-grid" id="proxyCountryButtons">
-          <button class="proxyip-country active" type="button" data-country="">全部</button>
-        </div>
-        <div class="proxyip-main">
-          <div class="proxyip-tabs">
-            <button class="proxyip-tab active" type="button" data-ip-version="4">IPv4</button>
-            <button class="proxyip-tab" type="button" data-ip-version="6">IPv6</button>
-          </div>
-          <div class="table-wrap proxyip-table-wrap">
-            <div class="proxyip-hidden-settings" hidden>
-              <select id="countrySelect"><option value="">全部国家</option></select>
-              <select id="portSelect"><option value="443">443</option></select>
-              <select id="statusSelect">
-                <option value="verified,usable">已验证 + 可用</option>
-                <option value="verified">已验证</option>
-                <option value="usable">可用</option>
-                <option value="all">全部</option>
-              </select>
-              <input id="limitInput" type="number" min="1" max="100" value="50">
-              <input id="timeoutMs" type="number" min="1000" max="8000" value="3500">
-              <input id="concurrency" type="number" min="1" max="8" value="4">
-              <input id="toggleAll" type="checkbox">
-              <button id="selectOk" type="button" disabled>只保留可用</button>
-            </div>
-          <table>
-            <thead>
-              <tr>
-                <th style="width:46px">选</th>
-                <th>IP地址:端口</th>
-                <th>出口</th>
-                <th>地区</th>
-                <th>延迟</th>
-              </tr>
-            </thead>
-            <tbody id="tbody">
-              <tr><td colspan="5" class="hint">暂无候选。</td></tr>
-            </tbody>
-          </table>
-          </div>
-        </div>
-        <div class="proxyip-footer">
-          <div class="proxyip-selected-row">
-            <span id="candidateStatus" class="hint">已选 0/0</span>
-            <input id="customProxyip" class="mono" placeholder="自定义地址，多个用逗号分隔" spellcheck="false">
-          </div>
-          <div class="proxyip-actions">
-            <button id="saveSelected" class="warn" type="button" disabled>确认</button>
-            <button id="cancelProxyip" class="ghost" type="button">取消</button>
-            <button id="probeSelected" class="secondary" type="button" disabled>测速</button>
-            <button id="loadCandidates" type="button">自动</button>
-          </div>
-        </div>
-      </section>
+      <section class="panel flat preference-workspace" aria-label="优选功能区"></section>
     </section>
 
     <section id="autoView" class="view">
@@ -1593,10 +1430,6 @@
       addText: "",
       auto: { settings: {}, state: {} },
       currentProxyip: "",
-      nodes: [],
-      selected: new Set(),
-      probe: new Map(),
-      proxyIpVersion: "4",
       autoIpVersion: "4",
       autoRegion: "亚洲",
       autoSelectedCountry: "",
@@ -2156,87 +1989,9 @@
       setStatus("入口已刷新。", "ok");
     }
 
-    function proxyHostOf(node) {
-      const directIp = String(node?.ip || "").trim();
-      if (directIp) return directIp;
-      const endpoint = endpointOf(node);
-      if (endpoint.startsWith("[")) {
-        const end = endpoint.indexOf("]");
-        return end > 0 ? endpoint.slice(1, end) : endpoint;
-      }
-      return endpoint.split(":")[0] || "";
-    }
-
-    function isNodeIpVersion(node, version) {
-      const host = proxyHostOf(node);
-      return String(version) === "6" ? host.includes(":") : host.includes(".") && !host.includes(":");
-    }
-
-    function filteredProxyNodes() {
-      return state.nodes.filter((node) => isNodeIpVersion(node, state.proxyIpVersion));
-    }
-
-    function proxyExitLabel(node, probe) {
-      if (probe && !probe.ok) return "失败";
-      const entryIp = proxyHostOf(node).toLowerCase();
-      const exitIp = String(probe?.exitIp || node.exitIp || "").trim().toLowerCase();
-      if (!entryIp || !exitIp) return "-";
-      return entryIp === exitIp ? "一致" : "不一致";
-    }
-
-    function proxyLatencyLabel(node, probe) {
-      if (probe && !probe.ok) return probeFailureText(probe);
-      if (probe && probe.ok) return (probe.traceMs ?? probe.googleMs ?? probe.connectMs ?? "-") + "ms";
-      return node.latencyMs == null ? "-" : node.latencyMs + "ms";
-    }
-
-    function proxyRegionLabel(node, probe) {
-      const country = autoCountryLabel(probe?.loc || node.country || "");
-      const region = String(node.region || "").trim();
-      const city = String(node.city || "").trim();
-      return city || region || country || "-";
-    }
-
     function probeFailureText(result) {
       const text = String(result?.error || result?.traceError || result?.googleError || "失败").trim();
       return text.length > 42 ? text.slice(0, 42) + "..." : text;
-    }
-
-    function selectedVisibleProxyCount(nodes) {
-      return nodes.filter((node) => state.selected.has(endpointOf(node))).length;
-    }
-
-    function renderCandidates() {
-      const tbody = document.getElementById("tbody");
-      const nodes = filteredProxyNodes();
-      if (!nodes.length) {
-        tbody.innerHTML = '<tr><td colspan="5" class="hint">暂无候选。</td></tr>';
-        document.getElementById("probeSelected").disabled = true;
-        document.getElementById("selectOk").disabled = true;
-        document.getElementById("saveSelected").disabled = true;
-        document.getElementById("candidateStatus").textContent = "已选 0/0";
-        return;
-      }
-      tbody.innerHTML = nodes.map((node) => {
-        const proxy = endpointOf(node);
-        const probe = state.probe.get(proxy);
-        const checked = state.selected.has(proxy) ? "checked" : "";
-        const exitLabel = proxyExitLabel(node, probe);
-        const exitClass = exitLabel === "一致" ? "ok" : exitLabel === "不一致" || exitLabel === "失败" ? "bad" : "";
-        return `<tr>
-          <td><input data-pick="${escapeHtml(proxy)}" type="checkbox" ${checked}></td>
-          <td class="mono">${escapeHtml(proxy)}</td>
-          <td class="${exitClass}">${escapeHtml(exitLabel)}</td>
-          <td>${escapeHtml(proxyRegionLabel(node, probe))}</td>
-          <td>${escapeHtml(proxyLatencyLabel(node, probe))}</td>
-        </tr>`;
-      }).join("");
-      const visibleSelectedCount = selectedVisibleProxyCount(nodes);
-      document.getElementById("probeSelected").disabled = !visibleSelectedCount;
-      document.getElementById("selectOk").disabled = !Array.from(state.probe.values()).some((item) => item.ok);
-      document.getElementById("saveSelected").disabled = !visibleSelectedCount && !document.getElementById("customProxyip").value.trim();
-      document.getElementById("toggleAll").checked = nodes.length > 0 && nodes.every((node) => state.selected.has(endpointOf(node)));
-      document.getElementById("candidateStatus").textContent = "已选 " + visibleSelectedCount + "/" + nodes.length;
     }
 
     function catalogCountryList(summary, version) {
@@ -2263,20 +2018,6 @@
       return [{ port: String(summary?.port || "443"), count }];
     }
 
-    function applyCatalogSummary(version) {
-      const data = state.catalogSummary || {};
-      const countrySelect = document.getElementById("countrySelect");
-      const portSelect = document.getElementById("portSelect");
-      const countries = catalogCountryList(data, version);
-      const ports = catalogPortList(data, version);
-      countrySelect.innerHTML = '<option value="">全部国家</option>' + countries.map((item) => `<option value="${escapeHtml(item.code)}">${escapeHtml(item.code + " (" + item.count + ")")}</option>`).join("");
-      const topPorts = topCatalogPorts(ports);
-      portSelect.innerHTML = topPorts.map((item) => `<option value="${escapeHtml(item.port)}">${escapeHtml(item.port)}</option>`).join("");
-      portSelect.value = topPorts.some((item) => item.port === "443") ? "443" : topPorts[0]?.port || "443";
-      renderProxyCountryButtons(countries);
-      document.getElementById("candidateStatus").textContent = "已选 0/0";
-    }
-
     async function loadSummary() {
       try {
         state.catalogSummary = bootstrap.catalog?.summaryUrl ? await catalogJson(bootstrap.catalog.summaryUrl) : {};
@@ -2284,7 +2025,6 @@
         state.catalogSummary = {};
         setStatus(error.message || "\u7f3a\u5c11 IP \u4ed3\u5e93\u914d\u7f6e", "error");
       }
-      applyCatalogSummary(state.proxyIpVersion);
       fillAutoCountryOptions(catalogCountryList(state.catalogSummary, "all"));
       fillAutoPortOptions(catalogPortList(state.catalogSummary, state.autoIpVersion));
       renderAutoPicker();
@@ -2403,52 +2143,6 @@
       return false;
     }
 
-    function renderProxyCountryButtons(countries) {
-      const topCountries = (Array.isArray(countries) ? countries : [])
-        .map((item) => ({
-          code: String(item.code || "").trim().toUpperCase(),
-          count: Number(item.count) || 0
-        }))
-        .filter((item) => item.code)
-        .sort((left, right) => (Number(right.count) || 0) - (Number(left.count) || 0))
-        .slice(0, 5);
-      const current = document.getElementById("countrySelect").value;
-      const buttons = [{ code: "", label: "全部" }].concat(topCountries.map((item) => ({ code: item.code, label: autoCountryLabel(item.code) })));
-      document.getElementById("proxyCountryButtons").innerHTML = buttons.map((item) => {
-        const active = item.code === current ? " active" : "";
-        return `<button class="proxyip-country${active}" type="button" data-country="${escapeHtml(item.code)}">${escapeHtml(item.label)}</button>`;
-      }).join("");
-    }
-
-    function setProxyCountry(country) {
-      document.getElementById("countrySelect").value = country;
-      document.querySelectorAll(".proxyip-country").forEach((button) => {
-        button.classList.toggle("active", button.dataset.country === country);
-      });
-      state.nodes = [];
-      state.probe.clear();
-      state.selected.clear();
-      renderCandidates();
-    }
-
-    function setProxyIpVersion(version) {
-      state.proxyIpVersion = String(version) === "6" ? "6" : "4";
-      document.querySelectorAll(".proxyip-tab").forEach((button) => {
-        button.classList.toggle("active", button.dataset.ipVersion === state.proxyIpVersion);
-      });
-      applyCatalogSummary(state.proxyIpVersion);
-      state.nodes = [];
-      state.probe.clear();
-      state.selected.clear();
-      renderCandidates();
-    }
-
-    function resetProxyPicker() {
-      state.selected.clear();
-      document.getElementById("customProxyip").value = "";
-      renderCandidates();
-    }
-
     function fillAutoCountryOptions(countries) {
       const items = normalizedCatalogCountries(countries)
         .sort((left, right) => (Number(right.count) || 0) - (Number(left.count) || 0));
@@ -2479,87 +2173,6 @@
       if (!value || value === "all") return true;
       const allowed = new Set(value.split(",").map((item) => item.trim()).filter(Boolean));
       return allowed.has(String(node?.status || "").trim().toLowerCase());
-    }
-
-    async function loadCatalogFileCandidates() {
-      const country = document.getElementById("countrySelect").value;
-      const port = document.getElementById("portSelect").value;
-      const status = document.getElementById("statusSelect").value;
-      const limit = normalizedNumber(document.getElementById("limitInput"), 50, 1, 100);
-      const data = await catalogJson(catalogNodesUrl(state.proxyIpVersion));
-      return {
-        nodes: (Array.isArray(data.nodes) ? data.nodes : []).filter((node) => {
-          if (country && String(node.country || "").trim().toUpperCase() !== country) return false;
-          if (port && String(node.port || "").trim() !== String(port).trim()) return false;
-          return catalogStatusMatches(node, status);
-        }).slice(0, limit)
-      };
-    }
-
-    async function loadCandidates() {
-      if (catalogNodesUrl(state.proxyIpVersion)) {
-        setStatus("Loading candidates...");
-        const data = await loadCatalogFileCandidates();
-        state.nodes = Array.isArray(data.nodes) ? data.nodes : [];
-        state.probe.clear();
-        state.selected = new Set(filteredProxyNodes().map(endpointOf).filter(Boolean));
-        renderCandidates();
-        setStatus("Candidates loaded.", "ok");
-        return;
-      }
-      if (!bootstrap.catalog.queryUrl) {
-        throw new Error("\u7f3a\u5c11 IP \u4ed3\u5e93\u5730\u5740");
-      }
-      const url = new URL(bootstrap.catalog.queryUrl, bootstrap.workerOrigin);
-      const country = document.getElementById("countrySelect").value;
-      const port = document.getElementById("portSelect").value;
-      const status = document.getElementById("statusSelect").value;
-      const limit = normalizedNumber(document.getElementById("limitInput"), 50, 1, 100);
-      if (country) url.searchParams.set("country", country);
-      if (port) url.searchParams.set("port", port);
-      if (status) url.searchParams.set("status", status);
-      url.searchParams.set("limit", String(limit));
-      setStatus("正在获取候选...");
-      const data = await catalogJson(url.href);
-      state.nodes = Array.isArray(data.nodes) ? data.nodes : [];
-      state.probe.clear();
-      state.selected = new Set(filteredProxyNodes().map(endpointOf).filter(Boolean));
-      renderCandidates();
-      setStatus("候选已获取。", "ok");
-    }
-
-    async function probeSelected() {
-      const targets = Array.from(state.selected);
-      if (!targets.length) return;
-      setStatus("正在测速 " + targets.length + " 条...");
-      const data = await postJson(bootstrap.endpoints.proxyTest, {
-        targets,
-        timeoutMs: normalizedNumber(document.getElementById("timeoutMs"), 3500, 1000, 8000),
-        concurrency: normalizedNumber(document.getElementById("concurrency"), 4, 1, 8)
-      });
-      (data.results || []).forEach((item) => state.probe.set(item.proxy, item));
-      renderCandidates();
-      setStatus("测速完成，可用 " + (data.ok || 0) + " / " + (data.count || 0) + "。", "ok");
-    }
-
-    function selectOk() {
-      state.selected = new Set(Array.from(state.probe.entries()).filter(([, result]) => result.ok).map(([proxy]) => proxy));
-      renderCandidates();
-    }
-
-    async function saveSelectedProxyip() {
-      const visibleEndpoints = new Set(filteredProxyNodes().map(endpointOf).filter(Boolean));
-      const selected = Array.from(state.selected).filter((proxy) => visibleEndpoints.has(proxy));
-      const custom = cleanProxyipText(document.getElementById("customProxyip").value);
-      const finalProxyip = cleanProxyipText(selected.concat(custom ? custom.split(",") : []).join(","));
-      const count = countList(finalProxyip);
-      if (!count) return;
-      fields.proxyMode.value = "manual";
-      fields.autoEnabled.checked = false;
-      fields.proxyip.value = displayProxyipText(finalProxyip);
-      fields.proxyCount.value = countList(fields.proxyip.value);
-      await saveProxyip();
-      setStatus("已写入 " + count + " 条 PROXYIP。", "ok");
     }
 
     function resetAutoRunState(settings) {
@@ -2950,19 +2563,6 @@
       document.getElementById("reloadState").addEventListener("click", () => loadState().catch(showError));
       document.getElementById("logoutButton").addEventListener("click", () => logout().catch(showError));
       document.getElementById("refreshEntries").addEventListener("click", () => refreshEntries().catch(showError));
-      document.getElementById("loadCandidates").addEventListener("click", () => loadCandidates().catch(showError));
-      document.getElementById("probeSelected").addEventListener("click", () => probeSelected().catch(showError));
-      document.getElementById("selectOk").addEventListener("click", selectOk);
-      document.getElementById("saveSelected").addEventListener("click", () => saveSelectedProxyip().catch(showError));
-      document.getElementById("cancelProxyip").addEventListener("click", resetProxyPicker);
-      document.getElementById("proxyCountryButtons").addEventListener("click", (event) => {
-        const button = event.target.closest("[data-country]");
-        if (!button) return;
-        setProxyCountry(button.dataset.country || "");
-      });
-      document.querySelectorAll(".proxyip-tab").forEach((button) => {
-        button.addEventListener("click", () => setProxyIpVersion(button.dataset.ipVersion || "4"));
-      });
       document.querySelectorAll(".auto-region-button").forEach((button) => {
         button.addEventListener("click", () => setAutoRegion(button.dataset.autoRegion || ""));
       });
@@ -2974,7 +2574,6 @@
         if (!button) return;
         selectAutoCountry(button.dataset.autoCountry || "");
       });
-      document.getElementById("customProxyip").addEventListener("input", renderCandidates);
       document.getElementById("runAuto").addEventListener("click", () => runAuto().catch(showError));
       fields.autoRunRows.addEventListener("change", (event) => {
         const proxy = event.target?.dataset?.autoRunPick;
@@ -3009,22 +2608,6 @@
         fields.autoEnabled.checked = true;
         fields.proxyMode.value = "auto";
         syncProxyModeView();
-      });
-      document.getElementById("toggleAll").addEventListener("change", (event) => {
-        const visible = filteredProxyNodes().map(endpointOf).filter(Boolean);
-        if (event.target.checked) {
-          visible.forEach((proxy) => state.selected.add(proxy));
-        } else {
-          visible.forEach((proxy) => state.selected.delete(proxy));
-        }
-        renderCandidates();
-      });
-      document.getElementById("tbody").addEventListener("change", (event) => {
-        const proxy = event.target?.dataset?.pick;
-        if (!proxy) return;
-        if (event.target.checked) state.selected.add(proxy);
-        else state.selected.delete(proxy);
-        renderCandidates();
       });
       ["token", "subName", "host", "uuid", "fingerprint", "proxyMode", "proxyip"].forEach((id) => {
         fields[id]?.addEventListener("input", () => {
