@@ -1398,8 +1398,7 @@
     let proxyipManualDraft = "";
     const AUTO_RUN_CANDIDATE_LIMIT = 500;
     const AUTO_RUN_IMPORT_LIMIT = 9;
-    const AUTO_RUN_TEST_BATCH_SIZE = 8;
-    const AUTO_RUN_TEST_CONCURRENCY = 8;
+    const AUTO_RUN_REQUEST_CONCURRENCY = 8;
     const AUTO_RUN_TEST_TIMEOUT_MS = 1000;
 
     if (!injected) {
@@ -2311,48 +2310,37 @@
       state.autoRun.testing = true;
       state.autoRun.cancel = false;
       renderAutoRunDialog();
-      for (let index = 0; index < targets.length; index += AUTO_RUN_TEST_BATCH_SIZE) {
+      for (let index = 0; index < targets.length; index += AUTO_RUN_REQUEST_CONCURRENCY) {
         if (state.autoRun.runId !== runId || state.autoRun.cancel) return;
-        const chunk = targets.slice(index, index + AUTO_RUN_TEST_BATCH_SIZE);
+        const chunk = targets.slice(index, index + AUTO_RUN_REQUEST_CONCURRENCY);
         chunk.forEach((proxy) => state.autoRun.results.set(proxy, { proxy, testing: true, ok: false }));
         renderAutoRunDialog();
-        let data;
-        try {
-          data = await postJson(bootstrap.endpoints.proxyTest, {
-            targets: chunk,
-            timeoutMs: AUTO_RUN_TEST_TIMEOUT_MS,
-            concurrency: AUTO_RUN_TEST_CONCURRENCY,
-            googleAfterTrace: true
-          });
-        } catch (error) {
-          if (state.autoRun.runId !== runId || state.autoRun.cancel) return;
-          if (isAuthError(error)) {
-            state.autoRun.testing = false;
-            state.autoRun.cancel = true;
-            renderAutoRunDialog();
-            fields.autoRunProgress.textContent = "登录状态失效，请重新进入后台";
-            throw new Error("登录状态失效，请重新进入后台");
+        await Promise.all(chunk.map(async (proxy) => {
+          try {
+            const data = await postJson(bootstrap.endpoints.proxyTest, {
+              targets: [proxy],
+              timeoutMs: AUTO_RUN_TEST_TIMEOUT_MS,
+              googleAfterTrace: true
+            });
+            if (state.autoRun.runId !== runId || state.autoRun.cancel) return;
+            const result = Array.isArray(data.results) ? data.results[0] : null;
+            state.autoRun.results.set(proxy, result || { proxy, ok: false, error: "\u65e0\u7ed3\u679c" });
+          } catch (error) {
+            if (state.autoRun.runId !== runId || state.autoRun.cancel) return;
+            if (isAuthError(error)) {
+              state.autoRun.testing = false;
+              state.autoRun.cancel = true;
+              fields.autoRunProgress.textContent = "登录状态失效，请重新进入后台";
+              throw new Error("登录状态失效，请重新进入后台");
+            }
+            state.autoRun.results.set(proxy, {
+              proxy,
+              ok: false,
+              error: error.message || String(error)
+            });
           }
-          chunk.forEach((proxy) => state.autoRun.results.set(proxy, {
-            proxy,
-            ok: false,
-            error: error.message || String(error)
-          }));
           renderAutoRunDialog();
-          continue;
-        }
-        if (state.autoRun.runId !== runId || state.autoRun.cancel) return;
-        const returned = new Set();
-        (data.results || []).forEach((item) => {
-          returned.add(item.proxy);
-          state.autoRun.results.set(item.proxy, item);
-        });
-        chunk.forEach((proxy) => {
-          if (!returned.has(proxy)) {
-            state.autoRun.results.set(proxy, { proxy, ok: false, error: "\u65e0\u7ed3\u679c" });
-          }
-        });
-        renderAutoRunDialog();
+        }));
       }
       if (state.autoRun.runId !== runId) return;
       state.autoRun.testing = false;
