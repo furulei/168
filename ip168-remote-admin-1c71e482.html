@@ -1763,16 +1763,17 @@
       return readJson(response);
     }
 
-    async function catalogJson(url) {
-      const response = await fetch(url, { cache: "no-store" });
+    async function catalogJson(url, signal) {
+      const response = await fetch(url, { cache: "no-store", signal });
       return readJson(response);
     }
 
-    async function postJson(url, body) {
+    async function postJson(url, body, signal) {
       return api(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body)
+        body: JSON.stringify(body),
+        signal
       });
     }
 
@@ -2176,6 +2177,7 @@
 
     function resetAutoRunState(settings) {
       const runId = Number(state.autoRun?.runId || 0) + 1;
+      abortAutoRunRequests();
       state.autoRun = {
         candidates: [],
         selected: new Set(),
@@ -2183,10 +2185,29 @@
         settings,
         testing: false,
         cancel: false,
+        controllers: new Set(),
         tested: 0,
         ok: 0,
         runId
       };
+    }
+
+    function abortAutoRunRequests() {
+      const controllers = state.autoRun?.controllers;
+      if (!(controllers instanceof Set)) return;
+      controllers.forEach((controller) => controller.abort());
+      controllers.clear();
+    }
+
+    function stopAutoRunRequests() {
+      state.autoRun.cancel = true;
+      state.autoRun.testing = false;
+      abortAutoRunRequests();
+      state.autoRun.results.forEach((result, proxy) => {
+        if (result?.testing) {
+          state.autoRun.results.set(proxy, { ...result, testing: false, ok: false, error: "\u5df2\u505c\u6b62" });
+        }
+      });
     }
 
     function autoRunEndpointResult(proxy) {
@@ -2239,10 +2260,10 @@
       state.autoRun.ok = completed.filter((item) => item.ok).length;
     }
 
-    async function loadAutoRunCandidates(settings) {
+    async function loadAutoRunCandidates(settings, signal) {
       const url = catalogNodesUrl(settings.ipVersion);
       if (!url) throw new Error("\u7f3a\u5c11 IP \u4ed3\u5e93\u5730\u5740");
-      const data = await catalogJson(url);
+      const data = await catalogJson(url, signal);
       const country = String(settings.country || "").trim().toUpperCase();
       const port = String(settings.port || "").trim();
       return (Array.isArray(data.nodes) ? data.nodes : []).filter((node) => {
@@ -2286,19 +2307,38 @@
     }
 
     async function openAutoRunDialog() {
+      if (state.autoRun.testing) {
+        stopAutoRunRequests();
+        renderAutoRunDialog();
+        return;
+      }
       const settings = readAutoSettings();
       resetAutoRunState(settings);
       const runId = state.autoRun.runId;
+      state.autoRun.testing = true;
       fields.autoRunDialog.hidden = false;
       fields.autoRunProgress.textContent = "\u6b63\u5728\u8bfb\u53d6\u5019\u9009...";
       fields.autoRunRows.innerHTML = '<tr><td colspan="5" class="hint">\u5019\u9009\u8bfb\u53d6\u4e2d...</td></tr>';
       setStatus("\u6b63\u5728\u6253\u5f00\u5019\u9009 IP \u6d4b\u901f\u961f\u5217...");
-      const candidates = await loadAutoRunCandidates(settings);
+      const controller = new AbortController();
+      const controllers = state.autoRun.controllers;
+      controllers.add(controller);
+      let candidates;
+      try {
+        candidates = await loadAutoRunCandidates(settings, controller.signal);
+      } catch (error) {
+        if (controller.signal.aborted || state.autoRun.runId !== runId || state.autoRun.cancel) return;
+        state.autoRun.testing = false;
+        throw error;
+      } finally {
+        controllers.delete(controller);
+      }
       if (state.autoRun.runId !== runId || state.autoRun.cancel) return;
       state.autoRun.candidates = candidates;
       renderAutoRunDialog();
       const targets = state.autoRun.candidates.map(endpointOf).filter(Boolean);
       if (!targets.length) {
+        state.autoRun.testing = false;
         setStatus("\u5f53\u524d\u56fd\u5bb6\u6ca1\u6709\u5019\u9009 IP\u3002", "error");
         return;
       }
@@ -2316,20 +2356,22 @@
         chunk.forEach((proxy) => state.autoRun.results.set(proxy, { proxy, testing: true, ok: false }));
         renderAutoRunDialog();
         await Promise.all(chunk.map(async (proxy) => {
+          const controller = new AbortController();
+          const controllers = state.autoRun.controllers;
+          controllers.add(controller);
           try {
             const data = await postJson(bootstrap.endpoints.proxyTest, {
               targets: [proxy],
               timeoutMs: AUTO_RUN_TEST_TIMEOUT_MS,
               googleAfterTrace: true
-            });
+            }, controller.signal);
             if (state.autoRun.runId !== runId || state.autoRun.cancel) return;
             const result = Array.isArray(data.results) ? data.results[0] : null;
             state.autoRun.results.set(proxy, result || { proxy, ok: false, error: "\u65e0\u7ed3\u679c" });
           } catch (error) {
-            if (state.autoRun.runId !== runId || state.autoRun.cancel) return;
+            if (controller.signal.aborted || state.autoRun.runId !== runId || state.autoRun.cancel) return;
             if (isAuthError(error)) {
-              state.autoRun.testing = false;
-              state.autoRun.cancel = true;
+              stopAutoRunRequests();
               fields.autoRunProgress.textContent = "登录状态失效，请重新进入后台";
               throw new Error("登录状态失效，请重新进入后台");
             }
@@ -2338,11 +2380,13 @@
               ok: false,
               error: error.message || String(error)
             });
+          } finally {
+            controllers.delete(controller);
           }
           renderAutoRunDialog();
         }));
       }
-      if (state.autoRun.runId !== runId) return;
+      if (state.autoRun.runId !== runId || state.autoRun.cancel) return;
       state.autoRun.testing = false;
       renderAutoRunDialog();
     }
@@ -2410,8 +2454,7 @@
     }
 
     function closeAutoRunDialog() {
-      state.autoRun.cancel = true;
-      state.autoRun.testing = false;
+      stopAutoRunRequests();
       fields.autoRunDialog.hidden = true;
     }
 
