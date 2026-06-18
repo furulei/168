@@ -736,6 +736,26 @@
       min-height: 46px;
       padding: 1px 6px;
     }
+    .qr-box {
+      display: grid;
+      place-items: center;
+      width: min(320px, 100%);
+      aspect-ratio: 1;
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      background: #fff;
+    }
+    .qr-box #qrCanvas {
+      display: grid;
+      place-items: center;
+      width: 100%;
+      height: 100%;
+    }
+    .qr-box canvas,
+    .qr-box img {
+      width: 100%;
+      height: 100%;
+    }
     .table-wrap {
       width: 100%;
       overflow-x: auto;
@@ -1249,6 +1269,9 @@
               <input id="subName" class="sub-name-input" spellcheck="false" autocomplete="off" aria-label="订阅名称">
               <button id="saveSubName" class="sub-save-name secondary" type="button">保存</button>
             </div>
+            <div class="qr-box">
+              <div id="qrCanvas"></div>
+            </div>
           </div>
         </section>
       </div>
@@ -1388,6 +1411,7 @@
   </div>
   <div id="saveNotice" class="save-notice" role="status" aria-live="polite">已保存</div>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script>
     const injected = window.IP168_BOOTSTRAP;
     const app = document.getElementById("app");
@@ -1445,7 +1469,8 @@
         runId: 0
       },
       catalogSummary: null,
-      links: {}
+      links: {},
+      qrUrl: ""
     };
 
     const fields = {
@@ -1843,11 +1868,43 @@
         <div class="link-row" data-value="${escapeHtml(value)}">
           <strong>${escapeHtml(name)}</strong>
           <button class="secondary" type="button" data-copy="${escapeHtml(name)}" ${value ? "" : "disabled"}>复制</button>
+          <button class="ghost" type="button" data-qr="${escapeHtml(name)}" ${value ? "" : "disabled"}>&#20108;&#32500;&#30721;</button>
         </div>
       `).join("");
       links.querySelectorAll("[data-copy]").forEach((button) => {
         button.addEventListener("click", () => copyText(state.links[button.dataset.copy], button.dataset.copy));
       });
+      links.querySelectorAll("[data-qr]").forEach((button) => {
+        button.addEventListener("click", () => renderQr(state.links[button.dataset.qr], button.dataset.qr));
+      });
+      if (!state.qrUrl && state.links.Mixed) {
+        renderQr(state.links.Mixed, "Mixed");
+      }
+    }
+
+    function renderQr(value, label) {
+      state.qrUrl = value || "";
+      const qrBox = document.getElementById("qrCanvas");
+      qrBox.innerHTML = "";
+      if (!state.qrUrl) {
+        setStatus("\u6ca1\u6709\u53ef\u751f\u6210\u4e8c\u7ef4\u7801\u7684\u8ba2\u9605\u94fe\u63a5\u3002", "error");
+        return;
+      }
+      if (!window.QRCode) {
+        setStatus("\u4e8c\u7ef4\u7801\u5e93\u672a\u52a0\u8f7d\uff0c\u94fe\u63a5\u4ecd\u53ef\u590d\u5236\u3002", "error");
+        return;
+      }
+      try {
+        new window.QRCode(qrBox, {
+          text: state.qrUrl,
+          width: 320,
+          height: 320,
+          correctLevel: window.QRCode.CorrectLevel.M
+        });
+        setStatus(label + " \u4e8c\u7ef4\u7801", "ok");
+      } catch {
+        setStatus("\u4e8c\u7ef4\u7801\u751f\u6210\u5931\u8d25\u3002", "error");
+      }
     }
 
     function copyTextWithSelection(value) {
