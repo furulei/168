@@ -1061,7 +1061,7 @@
       width: min(520px, calc(100vw - 32px));
       max-height: min(480px, calc(100vh - 48px));
       display: grid;
-      grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+      grid-template-rows: auto auto minmax(0, 1fr) auto;
       gap: 10px;
       padding: 14px;
       border: 1px solid var(--line);
@@ -1070,6 +1070,13 @@
         linear-gradient(116deg, rgba(66, 49, 51, 0.96), rgba(31, 31, 39, 0.97)),
         var(--panel-soft);
       box-shadow: 0 24px 70px rgba(0, 0, 0, 0.38);
+    }
+    .entry-picker-panel .auto-run-head {
+      align-items: center;
+    }
+    .entry-picker-panel .auto-run-head h2 {
+      margin: 0;
+      white-space: nowrap;
     }
     .entry-picker-table-wrap {
       min-height: 170px;
@@ -1082,12 +1089,14 @@
       display: grid;
       grid-template-columns: repeat(5, minmax(0, 1fr));
       gap: 8px;
+      flex: 1;
+      min-width: 0;
     }
     .entry-picker-country {
       width: 100%;
       min-width: 0;
-      min-height: 44px;
-      height: 44px;
+      min-height: 42px;
+      height: 42px;
       padding: 0 8px;
       font-size: 14px;
       white-space: nowrap;
@@ -1102,13 +1111,14 @@
       width: 100%;
       border-collapse: collapse;
       font-size: 14px;
+      table-layout: fixed;
       user-select: none;
     }
     .entry-picker-table th,
     .entry-picker-table td {
       padding: 8px 10px;
       border-bottom: 1px solid rgba(255, 255, 255, 0.18);
-      text-align: left;
+      text-align: center;
       vertical-align: middle;
     }
     .entry-picker-table th {
@@ -1132,8 +1142,32 @@
     }
     .entry-picker-table td:first-child,
     .entry-picker-table th:first-child {
-      width: 64px;
+      width: 58px;
       text-align: center;
+    }
+    .entry-picker-table td:nth-child(3),
+    .entry-picker-table th:nth-child(3) {
+      width: 82px;
+      text-align: center;
+    }
+    .entry-picker-table td:nth-child(2) {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .entry-picker-tools {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      min-height: 42px;
+    }
+    .entry-picker-tools button {
+      width: 112px;
+      min-width: 0;
+      height: 42px;
+      min-height: 42px;
+      padding: 0 10px;
+      font-size: 14px;
     }
     .entry-picker-actions {
       display: grid;
@@ -1553,13 +1587,13 @@
     <div class="auto-run-backdrop" data-entry-picker-close></div>
     <section class="entry-picker-panel" role="dialog" aria-modal="true" aria-labelledby="entryPickerTitle">
       <div class="auto-run-head">
-        <div>
-          <h2 id="entryPickerTitle">选择入口</h2>
-          <div id="entryPickerSubtitle" class="auto-run-subtitle"></div>
-        </div>
+        <h2 id="entryPickerTitle">选择入口</h2>
+        <div id="entryPickerCountries" class="entry-picker-countries"></div>
       </div>
-      <div id="entryPickerCountries" class="entry-picker-countries"></div>
-      <div id="entryPickerProgress" class="auto-run-progress" role="status" aria-live="polite"></div>
+      <div class="entry-picker-tools">
+        <button id="entryPickerSelectAll" class="ghost" type="button">全选</button>
+        <button id="entryPickerInvert" class="ghost" type="button">反选</button>
+      </div>
       <div class="entry-picker-table-wrap">
         <table class="entry-picker-table">
           <thead>
@@ -1700,9 +1734,9 @@
       autoRunCancel: document.getElementById("autoRunCancel"),
       autoRunClose: document.getElementById("autoRunClose"),
       entryPickerDialog: document.getElementById("entryPickerDialog"),
-      entryPickerSubtitle: document.getElementById("entryPickerSubtitle"),
       entryPickerCountries: document.getElementById("entryPickerCountries"),
-      entryPickerProgress: document.getElementById("entryPickerProgress"),
+      entryPickerSelectAll: document.getElementById("entryPickerSelectAll"),
+      entryPickerInvert: document.getElementById("entryPickerInvert"),
       entryPickerRows: document.getElementById("entryPickerRows"),
       entryPickerSave: document.getElementById("entryPickerSave"),
       entryPickerCancel: document.getElementById("entryPickerCancel")
@@ -2272,11 +2306,7 @@
     }
 
     function updateEntryPickerProgress() {
-      const total = state.entryPicker.rows.length;
-      const selected = state.entryPicker.selectedRows.size;
-      fields.entryPickerSubtitle.textContent = entryPickerCountryName(state.entryPicker.country);
-      fields.entryPickerProgress.textContent = total ? "当前显示 " + total + " 条，已选择 " + selected + " 条。" : "当前国家暂无入口。";
-      fields.entryPickerSave.disabled = selected < 1;
+      fields.entryPickerSave.disabled = state.entryPicker.selectedRows.size < 1;
     }
 
     function setEntryPickerRowSelected(rowElement, selected) {
@@ -2335,15 +2365,12 @@
       state.entryPicker.dragMode = true;
       fields.entryPickerDialog.hidden = false;
       renderEntryPickerCountries();
-      fields.entryPickerSubtitle.textContent = entryPickerCountryName(state.entryPicker.country);
-      fields.entryPickerProgress.textContent = "正在读取入口池...";
       fields.entryPickerRows.innerHTML = '<tr><td colspan="3" class="hint">入口池读取中...</td></tr>';
       try {
         await loadEntryPickerSeed();
         renderEntryPickerCountry(state.entryPicker.country);
       } catch (error) {
         state.entryPicker.rows = [];
-        fields.entryPickerProgress.textContent = error.message || String(error);
         fields.entryPickerRows.innerHTML = '<tr><td colspan="3" class="hint">入口池读取失败。</td></tr>';
         fields.entryPickerSave.disabled = true;
       }
@@ -2384,6 +2411,27 @@
 
     function endEntryPickerDrag() {
       state.entryPicker.dragging = false;
+    }
+
+    function selectAllEntryPickerRows() {
+      state.entryPicker.rows.forEach((row) => {
+        state.entryPicker.selected.add(row.id);
+        state.entryPicker.selectedRows.set(row.id, row);
+      });
+      renderEntryPickerRows();
+    }
+
+    function invertEntryPickerRows() {
+      state.entryPicker.rows.forEach((row) => {
+        if (state.entryPicker.selected.has(row.id)) {
+          state.entryPicker.selected.delete(row.id);
+          state.entryPicker.selectedRows.delete(row.id);
+        } else {
+          state.entryPicker.selected.add(row.id);
+          state.entryPicker.selectedRows.set(row.id, row);
+        }
+      });
+      renderEntryPickerRows();
     }
 
     async function saveEntryPickerSelection() {
@@ -3100,6 +3148,8 @@
         if (!button) return;
         selectEntryPickerCountry(button.dataset.entryPickerCountry || "");
       });
+      fields.entryPickerSelectAll.addEventListener("click", selectAllEntryPickerRows);
+      fields.entryPickerInvert.addEventListener("click", invertEntryPickerRows);
       fields.entryPickerSave.addEventListener("click", () => saveEntryPickerSelection().catch(showError));
       fields.entryPickerCancel.addEventListener("click", closeEntryPickerDialog);
       fields.entryPickerDialog.addEventListener("click", (event) => {
