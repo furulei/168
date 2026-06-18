@@ -874,6 +874,94 @@
     .auto-actions {
       display: none;
     }
+    .preference-workspace {
+      display: grid;
+      align-content: start;
+      gap: 14px;
+      min-height: 0;
+    }
+    .preference-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      gap: 16px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--line);
+    }
+    .preference-head h2 {
+      margin-bottom: 6px;
+      font-size: 22px;
+    }
+    .preference-actions {
+      width: min(380px, 100%);
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .preference-actions button {
+      min-height: 52px;
+    }
+    .preference-line-buttons {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .preference-line-button {
+      min-width: 0;
+      min-height: 52px;
+      padding: 0 10px;
+      white-space: nowrap;
+      border-color: var(--line);
+      background: var(--control-bg);
+      color: var(--text);
+      font-weight: 760;
+    }
+    .preference-line-button.active {
+      border-color: var(--line-strong);
+      background: var(--control-bg-active);
+      color: #fff;
+    }
+    .entry-candidate-tools {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      min-height: 42px;
+    }
+    .entry-candidate-progress {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.45;
+    }
+    .entry-candidate-tool-buttons {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(96px, 1fr));
+      gap: 10px;
+      width: min(260px, 100%);
+    }
+    .entry-candidate-tool-buttons button {
+      min-height: 42px;
+    }
+    .entry-candidate-table-wrap {
+      min-height: 340px;
+    }
+    .entry-candidate-table th:nth-child(1),
+    .entry-candidate-table td:nth-child(1) {
+      width: 58px;
+      text-align: center;
+    }
+    .entry-candidate-table th:nth-child(2),
+    .entry-candidate-table td:nth-child(2) {
+      width: 38%;
+    }
+    .entry-candidate-table th:nth-child(3),
+    .entry-candidate-table td:nth-child(3),
+    .entry-candidate-table th:nth-child(4),
+    .entry-candidate-table td:nth-child(4),
+    .entry-candidate-table th:nth-child(5),
+    .entry-candidate-table td:nth-child(5) {
+      width: 16%;
+    }
     .auto-hidden-settings[hidden] {
       display: none;
     }
@@ -1312,6 +1400,21 @@
         border-left: 0;
         border-top: 1px solid var(--line);
       }
+      .preference-head {
+        display: grid;
+      }
+      .preference-actions {
+        width: 100%;
+      }
+      .preference-line-buttons {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .entry-candidate-tools {
+        display: grid;
+      }
+      .entry-candidate-tool-buttons {
+        width: 100%;
+      }
     }
     @media (max-width: 430px) {
       .subscription-title-row,
@@ -1320,6 +1423,10 @@
       }
       .subscription-status {
         width: 100%;
+      }
+      .preference-actions,
+      .entry-candidate-tool-buttons {
+        grid-template-columns: 1fr;
       }
     }
   </style>
@@ -1462,7 +1569,42 @@
     </section>
 
     <section id="proxyView" class="view">
-      <section class="panel flat preference-workspace" aria-label="优选功能区"></section>
+      <section class="panel flat preference-workspace" aria-label="优选功能区">
+        <div class="preference-head">
+          <div>
+            <h2>入口优选</h2>
+            <div id="entryCandidateStatus" class="auto-run-progress" role="status" aria-live="polite">未拉取。</div>
+          </div>
+          <div class="preference-actions">
+            <button id="entryCandidateLoad" type="button">拉取最新IPv4</button>
+            <button id="entryCandidateSave" class="warn" type="button" disabled>保存入口</button>
+          </div>
+        </div>
+        <div id="entryCandidateLines" class="preference-line-buttons"></div>
+        <div class="entry-candidate-tools">
+          <div id="entryCandidateProgress" class="entry-candidate-progress">候选 0 条，已选择 0 条。</div>
+          <div class="entry-candidate-tool-buttons">
+            <button id="entryCandidateSelectAll" class="ghost" type="button">全选</button>
+            <button id="entryCandidateInvert" class="ghost" type="button">反选</button>
+          </div>
+        </div>
+        <div class="auto-run-table-wrap entry-candidate-table-wrap">
+          <table class="auto-run-table entry-candidate-table">
+            <thead>
+              <tr>
+                <th>选</th>
+                <th>入口</th>
+                <th>线路</th>
+                <th>延迟</th>
+                <th>速度</th>
+              </tr>
+            </thead>
+            <tbody id="entryCandidateRows">
+              <tr><td colspan="5" class="hint">请先拉取最新 IPv4。</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
     </section>
 
     <section id="autoView" class="view">
@@ -1647,6 +1789,13 @@
     const AUTO_RUN_TEST_TIMEOUT_MS = 1000;
     const ENTRY_PICKER_SEED_URL = "https://raw.githubusercontent.com/furulei/168/main/seed.json";
     const ENTRY_PICKER_SAMPLE_SIZE = 30;
+    const ENTRY_CANDIDATE_LINES = Object.freeze([
+      { line: "ALL", name: "全部" },
+      { line: "CT", name: "电信" },
+      { line: "CU", name: "联通" },
+      { line: "CM", name: "移动" },
+      { line: "BGP", name: "多线" }
+    ]);
     const ENTRY_PICKER_COUNTRIES = Object.freeze([
       { code: "SG", name: "新加坡" },
       { code: "US", name: "美国" },
@@ -1673,6 +1822,7 @@
       save: adminBase + "/pg/xie",
       entries: adminBase + "/rk/du",
       proxyTest: adminBase + "/fd/jk/ce",
+      entryCandidates: adminBase + "/fd/jk/rk",
       proxyAuto: adminBase + "/fd/zd/du",
       proxyRun: adminBase + "/fd/zd/ce",
       logout: adminBase + "/ht/tu",
@@ -1705,6 +1855,12 @@
         dragMode: true,
         country: "SG",
         seed: null
+      },
+      entryCandidate: {
+        rows: [],
+        selected: new Set(),
+        line: "ALL",
+        loading: false
       },
       catalogSummary: null,
       links: {},
@@ -1748,6 +1904,14 @@
       autoRunImport: document.getElementById("autoRunImport"),
       autoRunCancel: document.getElementById("autoRunCancel"),
       autoRunClose: document.getElementById("autoRunClose"),
+      entryCandidateLoad: document.getElementById("entryCandidateLoad"),
+      entryCandidateSave: document.getElementById("entryCandidateSave"),
+      entryCandidateStatus: document.getElementById("entryCandidateStatus"),
+      entryCandidateLines: document.getElementById("entryCandidateLines"),
+      entryCandidateProgress: document.getElementById("entryCandidateProgress"),
+      entryCandidateSelectAll: document.getElementById("entryCandidateSelectAll"),
+      entryCandidateInvert: document.getElementById("entryCandidateInvert"),
+      entryCandidateRows: document.getElementById("entryCandidateRows"),
       entryPickerDialog: document.getElementById("entryPickerDialog"),
       entryPickerCountries: document.getElementById("entryPickerCountries"),
       entryPickerProgress: document.getElementById("entryPickerProgress"),
@@ -2523,6 +2687,175 @@
       setStatus("入口已刷新。", "ok");
     }
 
+    function entryCandidateLineInfo(line) {
+      const value = String(line || "").trim().toUpperCase();
+      return ENTRY_CANDIDATE_LINES.find((item) => item.line === value) || ENTRY_CANDIDATE_LINES[0];
+    }
+
+    function entryCandidateLineName(line) {
+      return entryCandidateLineInfo(line).name;
+    }
+
+    function entryCandidateRowId(row) {
+      return String(row?.id || (row?.line || "") + ":" + entryCandidateEndpoint(row).toLowerCase());
+    }
+
+    function entryCandidateEndpoint(row) {
+      return String(row?.proxy || (row?.ip && row?.port ? row.ip + ":" + row.port : "")).trim();
+    }
+
+    function entryCandidateVisibleRows() {
+      const line = String(state.entryCandidate.line || "ALL").toUpperCase();
+      const rows = Array.isArray(state.entryCandidate.rows) ? state.entryCandidate.rows : [];
+      return line === "ALL" ? rows : rows.filter((row) => String(row.line || "").toUpperCase() === line);
+    }
+
+    function entryCandidateDelayText(row) {
+      const raw = String(row?.latencyText || row?.latency || "").trim();
+      if (!raw) return "-";
+      return /ms|毫秒/i.test(raw) ? raw : raw + "ms";
+    }
+
+    function entryCandidateSpeedText(row) {
+      const raw = String(row?.speedText || row?.speed || "").trim();
+      if (!raw) return "-";
+      return /\/s|kb|mb/i.test(raw) ? raw : raw + " KB/s";
+    }
+
+    function renderEntryCandidateLines() {
+      fields.entryCandidateLines.innerHTML = ENTRY_CANDIDATE_LINES.map((item) => {
+        const active = item.line === state.entryCandidate.line ? " active" : "";
+        return '<button class="preference-line-button' + active + '" type="button" data-entry-candidate-line="' + escapeHtml(item.line) + '">' + escapeHtml(item.name) + '</button>';
+      }).join("");
+    }
+
+    function renderEntryCandidateProgress() {
+      const visibleRows = entryCandidateVisibleRows();
+      const selectedCount = state.entryCandidate.selected.size;
+      fields.entryCandidateProgress.textContent = "候选 " + visibleRows.length + " 条，已选择 " + selectedCount + " 条。";
+      fields.entryCandidateSave.disabled = selectedCount < 1 || state.entryCandidate.loading;
+      fields.entryCandidateSelectAll.disabled = !visibleRows.length || state.entryCandidate.loading;
+      fields.entryCandidateInvert.disabled = !visibleRows.length || state.entryCandidate.loading;
+    }
+
+    function renderEntryCandidateRows() {
+      const rows = entryCandidateVisibleRows();
+      if (!rows.length) {
+        const emptyText = state.entryCandidate.loading ? "正在拉取最新 IPv4..." : (state.entryCandidate.rows.length ? "当前线路暂无入口。" : "请先拉取最新 IPv4。");
+        fields.entryCandidateRows.innerHTML = '<tr><td colspan="5" class="hint">' + escapeHtml(emptyText) + '</td></tr>';
+        renderEntryCandidateProgress();
+        return;
+      }
+      fields.entryCandidateRows.innerHTML = rows.map((row) => {
+        const id = entryCandidateRowId(row);
+        const endpoint = entryCandidateEndpoint(row);
+        const checked = state.entryCandidate.selected.has(id) ? " checked" : "";
+        return `
+          <tr>
+            <td><input type="checkbox" data-entry-candidate-pick="${escapeHtml(id)}"${checked}></td>
+            <td class="mono">${escapeHtml(endpoint)}</td>
+            <td>${escapeHtml(entryCandidateLineName(row.line))}</td>
+            <td>${escapeHtml(entryCandidateDelayText(row))}</td>
+            <td>${escapeHtml(entryCandidateSpeedText(row))}</td>
+          </tr>
+        `;
+      }).join("");
+      renderEntryCandidateProgress();
+    }
+
+    function renderEntryCandidateView() {
+      renderEntryCandidateLines();
+      renderEntryCandidateRows();
+    }
+
+    function selectEntryCandidateLine(line) {
+      state.entryCandidate.line = entryCandidateLineInfo(line).line;
+      renderEntryCandidateView();
+    }
+
+    async function loadEntryCandidates() {
+      state.entryCandidate.loading = true;
+      state.entryCandidate.rows = [];
+      state.entryCandidate.selected = new Set();
+      fields.entryCandidateLoad.disabled = true;
+      fields.entryCandidateStatus.textContent = "正在拉取最新 IPv4...";
+      renderEntryCandidateRows();
+      try {
+        const data = await api(bootstrap.endpoints.entryCandidates);
+        state.entryCandidate.rows = Array.isArray(data.nodes) ? data.nodes : [];
+        state.entryCandidate.selected = new Set();
+        fields.entryCandidateStatus.textContent = "已拉取 " + state.entryCandidate.rows.length + " 条 IPv4，用时 " + Math.max(1, Math.round((Number(data.elapsedMs) || 0) / 1000)) + " 秒。";
+        setStatus("入口优选已拉取 " + state.entryCandidate.rows.length + " 条 IPv4。", "ok");
+      } finally {
+        state.entryCandidate.loading = false;
+        fields.entryCandidateLoad.disabled = false;
+        renderEntryCandidateRows();
+      }
+    }
+
+    function toggleEntryCandidatePick(id, checked) {
+      const key = String(id || "");
+      if (!key) return;
+      if (checked) {
+        state.entryCandidate.selected.add(key);
+      } else {
+        state.entryCandidate.selected.delete(key);
+      }
+      renderEntryCandidateRows();
+    }
+
+    function selectAllEntryCandidates() {
+      entryCandidateVisibleRows().forEach((row) => {
+        state.entryCandidate.selected.add(entryCandidateRowId(row));
+      });
+      renderEntryCandidateRows();
+    }
+
+    function invertEntryCandidates() {
+      entryCandidateVisibleRows().forEach((row) => {
+        const id = entryCandidateRowId(row);
+        if (state.entryCandidate.selected.has(id)) {
+          state.entryCandidate.selected.delete(id);
+        } else {
+          state.entryCandidate.selected.add(id);
+        }
+      });
+      renderEntryCandidateRows();
+    }
+
+    function selectedEntryCandidateRows() {
+      return (Array.isArray(state.entryCandidate.rows) ? state.entryCandidate.rows : []).filter((row) => state.entryCandidate.selected.has(entryCandidateRowId(row)));
+    }
+
+    function entryCandidateSaveLines(rows) {
+      return rows.map((row) => {
+        const endpoint = entryCandidateEndpoint(row);
+        const lineName = entryCandidateLineName(row.line);
+        return endpoint + "#" + lineName;
+      });
+    }
+
+    async function saveEntryCandidateSelection() {
+      const rows = selectedEntryCandidateRows();
+      if (!rows.length) {
+        renderEntryCandidateProgress();
+        return;
+      }
+      const previousText = fields.addText.value;
+      fields.entryCandidateSave.disabled = true;
+      fields.addText.value = entryCandidateSaveLines(rows).join("\n");
+      try {
+        await saveEntry();
+        fields.entryCandidateStatus.textContent = "已保存 " + rows.length + " 条入口。";
+        setStatus("已保存 " + rows.length + " 条入口。", "ok");
+      } catch (error) {
+        fields.addText.value = previousText;
+        throw error;
+      } finally {
+        renderEntryCandidateProgress();
+      }
+    }
+
     function probeFailureText(result) {
       const text = String(result?.error || result?.traceError || result?.googleError || "失败").trim();
       return text.length > 42 ? text.slice(0, 42) + "..." : text;
@@ -3133,6 +3466,20 @@
       document.getElementById("reloadState").addEventListener("click", () => loadState().catch(showError));
       document.getElementById("logoutButton").addEventListener("click", () => logout().catch(showError));
       document.getElementById("refreshEntries").addEventListener("click", () => refreshEntries().catch(showError));
+      fields.entryCandidateLoad.addEventListener("click", () => loadEntryCandidates().catch(showError));
+      fields.entryCandidateSave.addEventListener("click", () => saveEntryCandidateSelection().catch(showError));
+      fields.entryCandidateLines.addEventListener("click", (event) => {
+        const button = event.target.closest("[data-entry-candidate-line]");
+        if (!button) return;
+        selectEntryCandidateLine(button.dataset.entryCandidateLine || "ALL");
+      });
+      fields.entryCandidateRows.addEventListener("change", (event) => {
+        const id = event.target?.dataset?.entryCandidatePick;
+        if (!id) return;
+        toggleEntryCandidatePick(id, event.target.checked);
+      });
+      fields.entryCandidateSelectAll.addEventListener("click", selectAllEntryCandidates);
+      fields.entryCandidateInvert.addEventListener("click", invertEntryCandidates);
       document.querySelectorAll(".auto-region-button").forEach((button) => {
         button.addEventListener("click", () => setAutoRegion(button.dataset.autoRegion || ""));
       });
@@ -3216,6 +3563,7 @@
     document.getElementById("converterPill").textContent = bootstrap.converterUrl || "converter";
 
     bindEvents();
+    renderEntryCandidateView();
     loadState().then(() => loadSummary()).catch(showError);
   </script>
 </body>

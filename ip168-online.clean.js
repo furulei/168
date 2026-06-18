@@ -754,6 +754,12 @@ var PROXYIP_CATALOG_SUMMARY_URL = "";
 var PROXYIP_CATALOG_IPV4_URL = "";
 var PROXYIP_CATALOG_IPV6_URL = "";
 var PROXYIP_CATALOG_QUERY_URL = "";
+var ENTRY_CANDIDATE_FETCH_TIMEOUT_MS = 12e3;
+var WETEST_CLOUDFLARE_IPV4_API_URL = "https://www.wetest.vip/api/cf2dns/get_cloudflare_ip";
+var WETEST_CLOUDFLARE_API_KEY = "o1zrmHAF";
+var HOSTMONIT_CLOUDFLARE_IPV4_API_URL = "https://api.hostmonit.com/get_optimization_ip";
+var HOSTMONIT_CLOUDFLARE_API_KEY = "iDetkOys";
+var UOUIN_CLOUDFLARE_API_URL = "https://api.uouin.com/app/cloudflare";
 var PROXYIP_TRACE_HOST = "cloudflare.com";
 var PROXYIP_TRACE_PATH = "/cdn-cgi/trace";
 var PROXYIP_TRACE_MAX_BYTES = 64 * 1024;
@@ -2568,6 +2574,7 @@ function buildAdminBootstrap(requestUrl, adminBasePath, env) {
       save: `${base}/pg/xie`,
       entries: `${base}/rk/du`,
       proxyTest: `${base}/fd/jk/ce`,
+      entryCandidates: `${base}/fd/jk/rk`,
       proxyAuto: `${base}/fd/zd/du`,
       proxyRun: `${base}/fd/zd/ce`,
       logout: `${base}/ht/tu`
@@ -3452,6 +3459,262 @@ function isWebSocketUpgrade(request) {
   return (request.headers.get("Upgrade") || "").toLowerCase() === "websocket";
 }
 __name(isWebSocketUpgrade, "isWebSocketUpgrade");
+var ENTRY_CANDIDATE_LINE_NAMES = Object.freeze({
+  CT: "电信",
+  CU: "联通",
+  CM: "移动",
+  BGP: "多线"
+});
+var ENTRY_CANDIDATE_LINE_ORDER = Object.freeze(["CT", "CU", "CM", "BGP"]);
+var UOUIN_ENTRY_CANDIDATE_NODES = Object.freeze([
+  { nodeid: "ctcc", line: "CT" },
+  { nodeid: "cucc", line: "CU" },
+  { nodeid: "cmcc", line: "CM" },
+  { nodeid: "bgp", line: "BGP" }
+]);
+function normalizeEntryCandidateLine(rawLine) {
+  const value = String(rawLine || "").trim();
+  const upper = value.toUpperCase();
+  if (upper === "CT" || upper === "CTCC" || value === "电信") return "CT";
+  if (upper === "CU" || upper === "CUCC" || value === "联通") return "CU";
+  if (upper === "CM" || upper === "CMCC" || value === "移动") return "CM";
+  if (upper === "BGP" || upper === "CN" || value === "多线" || value === "三网") return "BGP";
+  return "";
+}
+__name(normalizeEntryCandidateLine, "normalizeEntryCandidateLine");
+function entryCandidateLineName(line) {
+  const normalized = normalizeEntryCandidateLine(line);
+  return ENTRY_CANDIDATE_LINE_NAMES[normalized] || "";
+}
+__name(entryCandidateLineName, "entryCandidateLineName");
+function entryCandidateLineRank(line) {
+  const index = ENTRY_CANDIDATE_LINE_ORDER.indexOf(normalizeEntryCandidateLine(line));
+  return index === -1 ? ENTRY_CANDIDATE_LINE_ORDER.length : index;
+}
+__name(entryCandidateLineRank, "entryCandidateLineRank");
+function entryCandidateNumber(rawValue) {
+  if (rawValue === null || rawValue === void 0 || rawValue === "") return null;
+  const match = String(rawValue).match(/-?\d+(?:\.\d+)?/);
+  if (!match) return null;
+  const value = Number(match[0]);
+  return Number.isFinite(value) ? value : null;
+}
+__name(entryCandidateNumber, "entryCandidateNumber");
+function entryCandidateTime(rawValue) {
+  if (rawValue === null || rawValue === void 0 || rawValue === "") return "";
+  if (typeof rawValue === "number" || /^\d+$/.test(String(rawValue))) {
+    const number = Number(rawValue);
+    if (!Number.isFinite(number) || number <= 0) return "";
+    const ms = number > 9999999999 ? number : number * 1e3;
+    const date = new Date(ms);
+    return Number.isNaN(date.getTime()) ? "" : date.toISOString();
+  }
+  return String(rawValue || "").trim();
+}
+__name(entryCandidateTime, "entryCandidateTime");
+function normalizeEntryCandidate(rawValue, fallbackLine) {
+  const raw = rawValue && typeof rawValue === "object" ? rawValue : {};
+  const ip = String(raw.ip || raw.address || raw.host || "").trim();
+  if (!ip || ip.includes(":")) return null;
+  let octets;
+  try {
+    octets = parseIPv4(ip);
+  } catch {
+    return null;
+  }
+  if (!octets || !isKnownCloudflareIPv4(octets)) return null;
+  const line = normalizeEntryCandidateLine(raw.line || raw.line_name || fallbackLine);
+  if (!line) return null;
+  const endpoint = { hostname: ip, port: 443, isIPv6: false };
+  const latency = entryCandidateNumber(raw.latency ?? raw.rtt_avg ?? raw.ping);
+  const speed = entryCandidateNumber(raw.speed);
+  const proxy = formatEndpoint(endpoint);
+  return {
+    id: line + ":" + proxy.toLowerCase(),
+    ip,
+    port: "443",
+    proxy,
+    line,
+    lineName: entryCandidateLineName(line),
+    latency,
+    latencyText: latency === null ? "" : String(raw.latency ?? raw.rtt_avg ?? raw.ping ?? latency),
+    speed,
+    speedText: speed === null ? "" : String(raw.speed),
+    colo: String(raw.colo || raw.datacenter || "").trim(),
+    time: entryCandidateTime(raw.time ?? raw.updated_at ?? raw.uptime)
+  };
+}
+__name(normalizeEntryCandidate, "normalizeEntryCandidate");
+async function readEntryCandidateJson(url, init = {}) {
+  const response = await withTimeout(fetch(url, {
+    ...init,
+    headers: {
+      Accept: "application/json",
+      ...(init.headers || {})
+    },
+    cf: { cacheTtl: 0, cacheEverything: false }
+  }), ENTRY_CANDIDATE_FETCH_TIMEOUT_MS, "entry candidate source timeout");
+  const text = await response.text();
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    throw new Error("entry candidate source response is not JSON");
+  }
+  if (!response.ok) {
+    throw new Error(data?.msg || data?.error || `entry candidate source HTTP ${response.status}`);
+  }
+  return data;
+}
+__name(readEntryCandidateJson, "readEntryCandidateJson");
+async function fetchWetTestEntryCandidates() {
+  const url = new URL(WETEST_CLOUDFLARE_IPV4_API_URL);
+  url.searchParams.set("key", WETEST_CLOUDFLARE_API_KEY);
+  url.searchParams.set("type", "v4");
+  const data = await readEntryCandidateJson(url.href);
+  if (data?.status !== true || Number(data?.code) !== 200) {
+    throw new Error(data?.msg || "wetest entry candidates failed");
+  }
+  const nodes = [];
+  const groups = data?.info && typeof data.info === "object" ? data.info : {};
+  for (const [line, entries] of Object.entries(groups)) {
+    for (const raw of Array.isArray(entries) ? entries : []) {
+      const node = normalizeEntryCandidate(raw, line);
+      if (node) nodes.push(node);
+    }
+  }
+  return { nodes };
+}
+__name(fetchWetTestEntryCandidates, "fetchWetTestEntryCandidates");
+async function fetchHostMonitEntryCandidates() {
+  const data = await readEntryCandidateJson(HOSTMONIT_CLOUDFLARE_IPV4_API_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ key: HOSTMONIT_CLOUDFLARE_API_KEY })
+  });
+  if (Number(data?.code) !== 200) {
+    throw new Error(data?.msg || "hostmonit entry candidates failed");
+  }
+  const nodes = [];
+  for (const raw of Array.isArray(data?.info) ? data.info : []) {
+    const node = normalizeEntryCandidate(raw, raw?.line);
+    if (node) nodes.push(node);
+  }
+  return { nodes };
+}
+__name(fetchHostMonitEntryCandidates, "fetchHostMonitEntryCandidates");
+function uouinEntryCandidateCredentials(env) {
+  const username = envText(env, "UOUIN_CLOUDFLARE_USERNAME", "UOUIN_USERNAME");
+  const key = envText(env, "UOUIN_CLOUDFLARE_KEY", "UOUIN_KEY");
+  return { username, key };
+}
+__name(uouinEntryCandidateCredentials, "uouinEntryCandidateCredentials");
+async function fetchUouinEntryCandidateGroup(credentials, group) {
+  const url = new URL(UOUIN_CLOUDFLARE_API_URL);
+  url.searchParams.set("username", credentials.username);
+  url.searchParams.set("key", credentials.key);
+  url.searchParams.set("url", "cloudflare.com");
+  url.searchParams.set("nodeid", group.nodeid);
+  const data = await readEntryCandidateJson(url.href);
+  if (String(data?.code) !== "200" && Number(data?.code) !== 200) {
+    throw new Error(data?.msg || "uouin entry candidates failed");
+  }
+  const source = data?.data?.[group.nodeid] || data?.data;
+  if (Number(source?.code) !== 200) {
+    throw new Error(data?.msg || "uouin entry candidate group failed");
+  }
+  return (Array.isArray(source?.info) ? source.info : []).map((raw) => ({
+    ...raw,
+    uptime: source?.uptime
+  })).map((raw) => normalizeEntryCandidate(raw, group.line)).filter(Boolean);
+}
+__name(fetchUouinEntryCandidateGroup, "fetchUouinEntryCandidateGroup");
+async function fetchUouinEntryCandidates(env) {
+  const credentials = uouinEntryCandidateCredentials(env);
+  if (!credentials.username || !credentials.key) {
+    return { nodes: [], skipped: true, reason: "uouin credentials are not configured" };
+  }
+  const settled = await Promise.allSettled(
+    UOUIN_ENTRY_CANDIDATE_NODES.map((group) => fetchUouinEntryCandidateGroup(credentials, group))
+  );
+  const nodes = settled.flatMap((result) => result.status === "fulfilled" ? result.value : []);
+  const errors = settled.filter((result) => result.status === "rejected").map((result) => result.reason?.message || String(result.reason));
+  if (!nodes.length && errors.length) {
+    throw new Error(errors[0]);
+  }
+  return { nodes, errors };
+}
+__name(fetchUouinEntryCandidates, "fetchUouinEntryCandidates");
+function mergeEntryCandidates(results) {
+  const rows = [];
+  const errors = [];
+  let skipped = 0;
+  for (const result of results) {
+    if (result.status !== "fulfilled") {
+      errors.push(result.reason?.message || String(result.reason));
+      continue;
+    }
+    if (result.value?.skipped) {
+      skipped += 1;
+    }
+    if (Array.isArray(result.value?.errors)) {
+      errors.push(...result.value.errors);
+    }
+    rows.push(...(Array.isArray(result.value?.nodes) ? result.value.nodes : []));
+  }
+  const seen = new Set();
+  const nodes = [];
+  for (const row of rows) {
+    if (!row?.id || seen.has(row.id)) continue;
+    seen.add(row.id);
+    nodes.push(row);
+  }
+  nodes.sort((left, right) => {
+    const rankDiff = entryCandidateLineRank(left.line) - entryCandidateLineRank(right.line);
+    if (rankDiff) return rankDiff;
+    const latencyDiff = (left.latency ?? Number.POSITIVE_INFINITY) - (right.latency ?? Number.POSITIVE_INFINITY);
+    if (latencyDiff) return latencyDiff;
+    return (right.speed ?? 0) - (left.speed ?? 0);
+  });
+  return { nodes, errors, skipped };
+}
+__name(mergeEntryCandidates, "mergeEntryCandidates");
+async function handleEntryCandidates(request, env) {
+  if (request.method !== "GET") {
+    return new Response("Method Not Allowed", { status: 405 });
+  }
+  const startedAt = Date.now();
+  const merged = mergeEntryCandidates(await Promise.allSettled([
+    fetchWetTestEntryCandidates(),
+    fetchHostMonitEntryCandidates(),
+    fetchUouinEntryCandidates(env)
+  ]));
+  const lineCounts = ENTRY_CANDIDATE_LINE_ORDER.map((line) => ({
+    line,
+    name: entryCandidateLineName(line),
+    count: merged.nodes.filter((node) => node.line === line).length
+  }));
+  if (!merged.nodes.length) {
+    return jsonResponse({
+      success: false,
+      error: "no entry candidates were fetched",
+      count: 0,
+      lineCounts,
+      elapsedMs: Date.now() - startedAt
+    }, { status: 502 });
+  }
+  return jsonResponse({
+    success: true,
+    ipVersion: "4",
+    port: "443",
+    count: merged.nodes.length,
+    lineCounts,
+    nodes: merged.nodes,
+    partial: Boolean(merged.errors.length || merged.skipped),
+    elapsedMs: Date.now() - startedAt
+  });
+}
+__name(handleEntryCandidates, "handleEntryCandidates");
 async function readLimitedText(request) {
   const declaredLength = Number(request.headers.get("Content-Length") || 0);
   if (declaredLength > DEFAULTS.MAX_ADMIN_BODY_BYTES) {
@@ -3636,6 +3899,7 @@ async function handleAdmin(request, env, url, basePath = ROUTES.ADMIN_ROOT) {
   const adminEntriesPath = `${adminBasePath}/rk/du`;
   const adminProxyCatalogPath = `${adminBasePath}/fd/jk`;
   const adminProxyTestPath = `${adminBasePath}/fd/jk/ce`;
+  const adminEntryCandidatesPath = `${adminBasePath}/fd/jk/rk`;
   const adminProxyAutoPath = `${adminBasePath}/fd/zd/du`;
   const adminProxyRunPath = `${adminBasePath}/fd/zd/ce`;
   const isProtectedPath = isProtectedAdminPath(url.pathname, adminBasePath);
@@ -3741,6 +4005,9 @@ async function handleAdmin(request, env, url, basePath = ROUTES.ADMIN_ROOT) {
   }
   if (url.pathname === adminProxyTestPath) {
     return withAdminCors(await handleProxyIpProbe(request, env, url));
+  }
+  if (url.pathname === adminEntryCandidatesPath) {
+    return withAdminCors(await handleEntryCandidates(request, env));
   }
   if (url.pathname === adminProxyCatalogPath || url.pathname.startsWith(`${adminProxyCatalogPath}/`)) {
     return withAdminCors(await handleProxyIpCatalog(request, env, url, adminProxyCatalogPath));
