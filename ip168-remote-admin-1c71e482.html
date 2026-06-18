@@ -2321,7 +2321,8 @@
           data = await postJson(bootstrap.endpoints.proxyTest, {
             targets: chunk,
             timeoutMs: AUTO_RUN_TEST_TIMEOUT_MS,
-            concurrency: AUTO_RUN_TEST_CONCURRENCY
+            concurrency: AUTO_RUN_TEST_CONCURRENCY,
+            traceOnly: true
           });
         } catch (error) {
           if (state.autoRun.runId !== runId || state.autoRun.cancel) return;
