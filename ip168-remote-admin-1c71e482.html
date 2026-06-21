@@ -259,7 +259,7 @@
       align-items: start;
     }
     .config-layout {
-      grid-template-columns: minmax(0, 2fr) minmax(220px, 1fr);
+      grid-template-columns: minmax(0, 1fr);
       align-items: stretch;
     }
     .basic-config-panel[hidden] {
@@ -384,9 +384,7 @@
       box-shadow: none;
     }
     .globe-card {
-      position: relative;
-      min-height: 100%;
-      display: grid;
+      display: none;
       place-items: center;
       overflow: visible;
       background: transparent;
@@ -1843,8 +1841,9 @@
       throw new Error("IP168 bootstrap is missing");
     }
 
-    const PROXY_KEY = "proxy";
-    const SUB_KEY = "sub";
+    // Keep the admin UI aligned with the Worker configuration schema.
+    const PROXY_KEY = "反代";
+    const SUB_KEY = "订阅生成";
     const DEFAULT_SUB_NAME = "\u5f52\u6765\u4ecd\u5c11\u5e74";
     const bootstrap = injected;
     const adminBase = bootstrap.adminBase || "/a";
