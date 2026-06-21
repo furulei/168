@@ -259,7 +259,7 @@
       align-items: start;
     }
     .config-layout {
-      grid-template-columns: minmax(0, 1fr);
+      grid-template-columns: minmax(0, 2fr) minmax(220px, 1fr);
       align-items: stretch;
     }
     .basic-config-panel[hidden] {
@@ -310,6 +310,14 @@
       min-height: 44px;
       padding: 0 16px;
       white-space: nowrap;
+    }
+    .proxy-editor-heading-spacer {
+      display: block;
+      flex: 0 0 132px;
+      width: 132px;
+      min-width: 132px;
+      height: 44px;
+      min-height: 44px;
     }
     .proxy-textarea-wrap {
       position: relative;
@@ -384,7 +392,9 @@
       box-shadow: none;
     }
     .globe-card {
-      display: none;
+      position: relative;
+      min-height: 100%;
+      display: grid;
       place-items: center;
       overflow: visible;
       background: transparent;
@@ -1537,7 +1547,10 @@
               </div>
             </section>
             <section class="proxy-editor-card proxy-exit-card">
-              <label class="proxy-editor-title" for="proxyip">出口IP</label>
+              <div class="proxy-editor-heading">
+                <label class="proxy-editor-title" for="proxyip">出口IP</label>
+                <span class="proxy-editor-heading-spacer" aria-hidden="true"></span>
+              </div>
               <div class="proxy-textarea-wrap">
                 <textarea id="proxyip" class="mono" spellcheck="false"></textarea>
                 <div id="proxyAutoHint" class="proxy-auto-hint" hidden>自动模式</div>
